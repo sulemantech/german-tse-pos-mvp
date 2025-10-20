@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant POS - German Compliant System</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --light: #f8fafc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        .pos-container {
+            display: grid;
+            grid-template-columns: 300px 1fr 400px;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+            background: var(--light);
+        }
+        
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            background: var(--dark);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 3px solid var(--primary);
+        }
+        
+        .header-info {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+        
+        /* Tables Panel */
+        .tables-panel {
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .table-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .table-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .table-card.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+        
+        .table-status {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-top: 5px;
+            color: white;
+        }
+        
+        .status-free { background: var(--success); }
+        .status-occupied { background: var(--warning); }
+        .status-reserved { background: var(--danger); }
+        
+        /* Main Order Area */
+        .order-area {
+            padding: 20px;
+            background: #f8fafc;
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+        
+        .order-items {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .item-details {
+            flex: 1;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        /* Menu Categories */
+        .menu-categories {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .category-btn {
+            padding: 10px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .category-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        /* Menu Items Grid */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+        }
+        
+        .menu-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .menu-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .item-price {
+            color: var(--primary);
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .item-vat {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        /* Payment Panel */
+        .payment-panel {
+            background: white;
+            border-left: 1px solid #e5e7eb;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .order-summary {
+            flex: 1;
+        }
+        
+        .summary-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+        }
+        
+        .summary-total {
+            font-size: 1.2em;
+            font-weight: bold;
+            border-top: 2px solid #e5e7eb;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        
+        .payment-methods {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .payment-btn {
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .payment-btn:hover {
+            border-color: var(--primary);
+        }
+        
+        .payment-btn.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 15px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+        
+        /* TSE Status */
+        .tse-status {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 20px;
+            font-size: 12px;
+        }
+        
+        .tse-ok { background: #d1fae5; border-color: var(--success); }
+        .tse-error { background: #fee2e2; border-color: var(--danger); }
+        
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            min-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="pos-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-title">
+                <h1>Restaurant POS System</h1>
+            </div>
+            <div class="header-info">
+                <span id="current-user">Welcome, Anna Schmidt</span>
+                <span id="current-time">10/20/2025 14:30</span>
+                <span id="register-id">Register: POS-001</span>
+                <span id="tse-status" class="tse-ok">TSE: Active</span>
+            </div>
+        </header>
+
+        <!-- Tables Panel -->
+        <aside class="tables-panel">
+            <h3>Tables</h3>
+            <div class="table-grid" id="table-grid">
+                <!-- Tables populated by JavaScript -->
+            </div>
+        </aside>
+
+        <!-- Main Order Area -->
+        <main class="order-area">
+            <div class="order-header">
+                <h2 id="current-table">Table 1 - Window Seat</h2>
+                <div class="order-info">
+                    <span>Guests: 2</span>
+                    <span>Open since: 12:30</span>
+                    <button class="btn-sm" id="btn-add-guest">+ Guest</button>
+                </div>
+            </div>
+
+            <div class="order-items" id="order-items">
+                <!-- Current order items appear here -->
+                <div class="order-item">
+                    <div class="item-details">
+                        <strong>Mineral Water 0.5L</strong>
+                        <div class="item-notes">No gas</div>
+                    </div>
+                    <div class="item-actions">
+                        <div class="quantity-controls">
+                            <button class="btn-sm">-</button>
+                            <span>2</span>
+                            <button class="btn-sm">+</button>
+                        </div>
+                        <span>€7.00</span>
+                        <button class="btn-sm" style="color: var(--danger);">×</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="menu-categories" id="menu-categories">
+                <!-- Categories populated by JavaScript -->
+            </div>
+
+            <div class="menu-grid" id="menu-grid">
+                <!-- Menu items populated by JavaScript -->
+            </div>
+        </main>
+
+        <!-- Payment Panel -->
+        <aside class="payment-panel">
+            <div class="order-summary">
+                <h3>Order Summary</h3>
+                <div class="summary-line">
+                    <span>Subtotal:</span>
+                    <span id="subtotal">€0.00</span>
+                </div>
+                <div class="summary-line">
+                    <span>VAT 19%:</span>
+                    <span id="vat-19">€0.00</span>
+                </div>
+                <div class="summary-line">
+                    <span>VAT 7%:</span>
+                    <span id="vat-7">€0.00</span>
+                </div>
+                <div class="summary-line summary-total">
+                    <span>Total:</span>
+                    <span id="total">€0.00</span>
+                </div>
+            </div>
+
+            <div class="payment-methods">
+                <button class="payment-btn" data-method="cash">Cash</button>
+                <button class="payment-btn" data-method="card">Credit Card</button>
+                <button class="payment-btn" data-method="ec">Debit Card</button>
+                <button class="payment-btn" data-method="voucher">Voucher</button>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-warning" id="btn-hold">Hold Order</button>
+                <button class="btn btn-primary" id="btn-print-bill">Print Bill</button>
+                <button class="btn btn-success" id="btn-payment">Process Payment</button>
+            </div>
+
+            <div class="tse-status tse-ok" id="tse-info">
+                <strong>TSE Status</strong><br>
+                Serial: TSE-001-DE-2024<br>
+                Last Signature: #1001 at 14:25:05<br>
+                Certificate Valid Until: 2026-12-31
+            </div>
+        </aside>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal" id="payment-modal">
+        <div class="modal-content">
+            <h3>Process Payment</h3>
+            <div class="summary-line summary-total">
+                <span>Amount Due:</span>
+                <span id="modal-total">€0.00</span>
+            </div>
+            <div style="margin: 20px 0;">
+                <label>Amount Tendered:</label>
+                <input type="number" id="amount-tendered" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #d1d5db; border-radius: 4px;">
+            </div>
+            <div class="summary-line">
+                <span>Change:</span>
+                <span id="change-amount">€0.00</span>
+            </div>
+            <div class="action-buttons" style="margin-top: 20px;">
+                <button class="btn btn-primary" id="btn-confirm-payment">Confirm Payment</button>
+                <button class="btn" style="background: #6b7280; color: white;" id="btn-cancel-payment">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data
+        const tables = [
+            { id: 'TABLE_01', name: 'Table 1', status: 'occupied', guests: 2, orderId: 'ORDER_20251020_001' },
+            { id: 'TABLE_02', name: 'Table 2', status: 'free', guests: 0 },
+            { id: 'TABLE_03', name: 'Table 3', status: 'occupied', guests: 4, orderId: 'ORDER_20251020_002' },
+            { id: 'TABLE_11', name: 'Terrace 1', status: 'reserved', guests: 0 },
+            { id: 'BAR_01', name: 'Bar Seat 1', status: 'occupied', guests: 1, orderId: 'ORDER_20251020_003' }
+        ];
+
+        const menuCategories = ['All', 'Drinks', 'Appetizers', 'Main Courses', 'Desserts', 'Special Offers'];
+        
+        const menuItems = [
+            { id: 'DRINK_WATER', name: 'Mineral Water 0.5L', category: 'Drinks', price: 3.50, vat: 7 },
+            { id: 'DRINK_BEER_05', name: 'Pilsner 0.5L', category: 'Drinks', price: 4.80, vat: 7 },
+            { id: 'MAIN_SCHNITZEL', name: 'Wiener Schnitzel', category: 'Main Courses', price: 18.90, vat: 19 },
+            { id: 'MAIN_BURGER', name: 'Homemade Burger', category: 'Main Courses', price: 16.50, vat: 19 },
+            { id: 'DESSERT_ICE', name: 'Ice Cream Sundae', category: 'Desserts', price: 6.50, vat: 19 }
+        ];
+
+        // Initialize POS
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTables();
+            loadMenuCategories();
+            loadMenuItems();
+            setupEventListeners();
+        });
+
+        function loadTables() {
+            const tableGrid = document.getElementById('table-grid');
+            tableGrid.innerHTML = '';
+            
+            tables.forEach(table => {
+                const tableCard = document.createElement('div');
+                tableCard.className = `table-card ${table.status === 'occupied' ? 'active' : ''}`;
+                tableCard.innerHTML = `
+                    <div class="table-name">${table.name}</div>
+                    <div class="table-status status-${table.status}">
+                        ${table.status.toUpperCase()}
+                    </div>
+                    ${table.guests > 0 ? `<div>Guests: ${table.guests}</div>` : ''}
+                `;
+                tableCard.addEventListener('click', () => selectTable(table));
+                tableGrid.appendChild(tableCard);
+            });
+        }
+
+        function loadMenuCategories() {
+            const categoriesContainer = document.getElementById('menu-categories');
+            categoriesContainer.innerHTML = '';
+            
+            menuCategories.forEach(category => {
+                const button = document.createElement('button');
+                button.className = 'category-btn';
+                button.textContent = category;
+                button.addEventListener('click', () => filterMenuByCategory(category));
+                categoriesContainer.appendChild(button);
+            });
+        }
+
+        function loadMenuItems(category = 'All') {
+            const menuGrid = document.getElementById('menu-grid');
+            menuGrid.innerHTML = '';
+            
+            const filteredItems = category === 'All' ? menuItems : menuItems.filter(item => item.category === category);
+            
+            filteredItems.forEach(item => {
+                const menuItem = document.createElement('div');
+                menuItem.className = 'menu-item';
+                menuItem.innerHTML = `
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-price">€${item.price.toFixed(2)}</div>
+                    <div class="item-vat">VAT ${item.vat}%</div>
+                `;
+                menuItem.addEventListener('click', () => addToOrder(item));
+                menuGrid.appendChild(menuItem);
+            });
+        }
+
+        function selectTable(table) {
+            document.getElementById('current-table').textContent = `${table.name} - ${table.status}`;
+            // Load order details for this table
+            updateOrderDisplay(table.orderId);
+        }
+
+        function addToOrder(menuItem) {
+            // Add item to current order
+            console.log('Adding to order:', menuItem);
+            // Update order display and totals
+            updateOrderTotals();
+        }
+
+        function updateOrderTotals() {
+            // Calculate and update order totals
+            const subtotal = 45.60;
+            const vat19 = 7.20;
+            const vat7 = 2.10;
+            const total = subtotal + vat19 + vat7;
+            
+            document.getElementById('subtotal').textContent = `€${subtotal.toFixed(2)}`;
+            document.getElementById('vat-19').textContent = `€${vat19.toFixed(2)}`;
+            document.getElementById('vat-7').textContent = `€${vat7.toFixed(2)}`;
+            document.getElementById('total').textContent = `€${total.toFixed(2)}`;
+            document.getElementById('modal-total').textContent = `€${total.toFixed(2)}`;
+        }
+
+        function setupEventListeners() {
+            // Payment method selection
+            document.querySelectorAll('.payment-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.payment-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Payment button
+            document.getElementById('btn-payment').addEventListener('click', function() {
+                document.getElementById('payment-modal').style.display = 'block';
+            });
+
+            // Confirm payment
+            document.getElementById('btn-confirm-payment').addEventListener('click', function() {
+                // Process payment through TSE
+                processPayment();
+            });
+
+            // Cancel payment
+            document.getElementById('btn-cancel-payment').addEventListener('click', function() {
+                document.getElementById('payment-modal').style.display = 'none';
+            });
+
+            // Amount tendered calculation
+            document.getElementById('amount-tendered').addEventListener('input', function() {
+                const total = parseFloat(document.getElementById('total').textContent.replace('€', ''));
+                const tendered = parseFloat(this.value) || 0;
+                const change = tendered - total;
+                document.getElementById('change-amount').textContent = `€${change > 0 ? change.toFixed(2) : '0.00'}`;
+            });
+        }
+
+        function processPayment() {
+            // Simulate TSE signing process
+            const tseInfo = document.getElementById('tse-info');
+            tseInfo.innerHTML = `
+                <strong>TSE Processing...</strong><br>
+                Signing receipt with TSE...
+            `;
+            
+            setTimeout(() => {
+                tseInfo.innerHTML = `
+                    <strong>TSE Success</strong><br>
+                    Receipt signed: #1002<br>
+                    Time: ${new Date().toLocaleTimeString()}<br>
+                    <em>Receipt stored compliantly</em>
+                `;
+                document.getElementById('payment-modal').style.display = 'none';
+                
+                // Reset order
+                document.getElementById('order-items').innerHTML = '';
+                updateOrderTotals();
+            }, 2000);
+        }
+
+        function filterMenuByCategory(category) {
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            loadMenuItems(category);
+        }
+    </script>
+</body>
+</html>

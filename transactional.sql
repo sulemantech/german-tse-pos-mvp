@@ -1,0 +1,214 @@
+-- Get full receipt data with line items and payment
+SELECT 
+    rh.RECEIPT_ID,
+    rh.START_TIME as ReceiptTime,
+    rh.REGISTER_SERIAL_NUMBER,
+    CONCAT(s.FIRST_NAME, ' ', s.LAST_NAME) as StaffName,
+    rh.TOTAL_AMOUNT as GrossTotal,
+    rh.TOTAL_NET_AMOUNT as NetTotal,
+    rh.TOTAL_VAT_AMOUNT as VATTotal,
+    rh.RECEIPT_TYPE,
+    rh.PROCESS_TYPE,
+    pd.PAYMENT_METHOD,
+    pd.PAID_AMOUNT,
+    tse.SIGNATURE_COUNTER,
+    tse.SIGNATURE_VALUE,
+    tse.LOG_TIME as SignatureTime
+FROM RECEIPT_HEADER rh
+JOIN STAFF_USERS s ON rh.STAFF_USER_ID = s.USER_ID
+LEFT JOIN PAYMENT_DETAILS pd ON rh.RECEIPT_ID = pd.RECEIPT_ID
+LEFT JOIN TSE_LOG tse ON rh.RECEIPT_ID = tse.RECEIPT_ID
+WHERE rh.RECEIPT_ID = 'RECEIPT_20251019_001';
+
+
+-- Get all line items for a specific receipt
+SELECT 
+    rli.LINE_NUMBER,
+    rli.ITEM_NAME,
+    rli.QUANTITY,
+    rli.UNIT_PRICE,
+    (rli.QUANTITY * rli.UNIT_PRICE) as LineTotal,
+    v.RATE as VATRate,
+    rli.MENU_ITEM_ID,
+    mi.ITEM_GROUP
+FROM RECEIPT_LINE_ITEM rli
+JOIN VAT_RATES v ON rli.VAT_ID = v.VAT_ID
+LEFT JOIN MENU_ITEMS mi ON rli.MENU_ITEM_ID = mi.ITEM_ID
+WHERE rli.RECEIPT_ID = 'RECEIPT_20251019_001'
+ORDER BY rli.LINE_NUMBER;
+
+
+
+
+-- Sales summary for a specific date
+SELECT 
+    CAST(rh.START_TIME as DATE) as SaleDate,
+    COUNT(DISTINCT rh.RECEIPT_ID) as TotalReceipts,
+    SUM(rh.TOTAL_AMOUNT) as TotalGrossSales,
+    SUM(rh.TOTAL_NET_AMOUNT) as TotalNetSales,
+    SUM(rh.TOTAL_VAT_AMOUNT) as TotalVAT,
+    AVG(rh.TOTAL_AMOUNT) as AverageReceiptValue
+FROM RECEIPT_HEADER rh
+WHERE CAST(rh.START_TIME as DATE) = '2025-10-19'
+GROUP BY CAST(rh.START_TIME as DATE);
+
+
+
+-- Sales breakdown by payment method
+SELECT 
+    pd.PAYMENT_METHOD,
+    COUNT(*) as TransactionCount,
+    SUM(pd.PAID_AMOUNT) as TotalAmount,
+    ROUND((SUM(pd.PAID_AMOUNT) / (SELECT SUM(PAID_AMOUNT) FROM PAYMENT_DETAILS 
+          WHERE RECEIPT_ID IN (SELECT RECEIPT_ID FROM RECEIPT_HEADER 
+                              WHERE CAST(START_TIME as DATE) = '2025-10-19')) * 100), 2) as Percentage
+FROM PAYMENT_DETAILS pd
+JOIN RECEIPT_HEADER rh ON pd.RECEIPT_ID = rh.RECEIPT_ID
+WHERE CAST(rh.START_TIME as DATE) = '2025-10-19'
+GROUP BY pd.PAYMENT_METHOD
+ORDER BY TotalAmount DESC;
+
+
+-- Detailed VAT breakdown
+SELECT 
+    v.VAT_ID,
+    v.RATE as VATRate,
+    v.DESCRIPTION as VATDescription,
+    COUNT(rli.LINE_NUMBER) as LineItemCount,
+    SUM(rli.QUANTITY * rli.UNIT_PRICE) as GrossAmount,
+    SUM((rli.QUANTITY * rli.UNIT_PRICE) / (1 + v.RATE/100)) as NetAmount,
+    SUM(rli.QUANTITY * rli.UNIT_PRICE - ((rli.QUANTITY * rli.UNIT_PRICE) / (1 + v.RATE/100))) as VATAmount
+FROM RECEIPT_LINE_ITEM rli
+JOIN VAT_RATES v ON rli.VAT_ID = v.VAT_ID
+JOIN RECEIPT_HEADER rh ON rli.RECEIPT_ID = rh.RECEIPT_ID
+WHERE CAST(rh.START_TIME as DATE) = '2025-10-19'
+GROUP BY v.VAT_ID, v.RATE, v.DESCRIPTION
+ORDER BY v.VAT_ID;
+
+
+
+-- Track which orders have been converted to receipts
+SELECT 
+    oh.ORDER_ID,
+    oh.TABLE_ID,
+    t.TABLE_NAME,
+    oh.ORDER_STATUS,
+    oh.ORDER_OPEN_TIME,
+    oh.ORDER_CLOSE_TIME,
+    oh.GUEST_COUNT,
+    rom.RECEIPT_ID,
+    rh.TOTAL_AMOUNT as ReceiptAmount,
+    CASE WHEN rom.RECEIPT_ID IS NOT NULL THEN 'RECEIPTED' ELSE 'NO_RECEIPT' END as ReceiptStatus
+FROM ORDER_HEADER oh
+JOIN RESTAURANT_TABLES t ON oh.TABLE_ID = t.TABLE_ID
+LEFT JOIN RECEIPT_ORDER_MAPPING rom ON oh.ORDER_ID = rom.ORDER_ID
+LEFT JOIN RECEIPT_HEADER rh ON rom.RECEIPT_ID = rh.RECEIPT_ID
+WHERE oh.ORDER_STATUS = 'CLOSED'
+ORDER BY oh.ORDER_OPEN_TIME DESC;
+
+
+
+-- Verify TSE signature counter sequence
+SELECT 
+    RECEIPT_ID,
+    SIGNATURE_COUNTER,
+    LAG(SIGNATURE_COUNTER) OVER (ORDER BY SIGNATURE_COUNTER) as PreviousCounter,
+    CASE 
+        WHEN SIGNATURE_COUNTER - LAG(SIGNATURE_COUNTER) OVER (ORDER BY SIGNATURE_COUNTER) = 1 THEN 'VALID'
+        WHEN LAG(SIGNATURE_COUNTER) OVER (ORDER BY SIGNATURE_COUNTER) IS NULL THEN 'FIRST'
+        ELSE 'GAP_DETECTED'
+    END as SequenceStatus
+FROM TSE_LOG
+WHERE TSE_SERIAL_NUMBER = 'TSE-001-DE-2024'
+ORDER BY SIGNATURE_COUNTER;
+
+
+
+-- Monitor currently open orders
+SELECT 
+    oh.ORDER_ID,
+    t.TABLE_NAME,
+    oh.ORDER_STATUS,
+    oh.ORDER_OPEN_TIME,
+    DATEDIFF(MINUTE, oh.ORDER_OPEN_TIME, GETDATE()) as MinutesOpen,
+    oh.GUEST_COUNT,
+    CONCAT(s.FIRST_NAME, ' ', s.LAST_NAME) as WaiterName,
+    COUNT(oi.ORDER_LINE_NUMBER) as ItemCount,
+    SUM(oi.QUANTITY * oi.UNIT_PRICE) as CurrentTotal
+FROM ORDER_HEADER oh
+JOIN RESTAURANT_TABLES t ON oh.TABLE_ID = t.TABLE_ID
+JOIN STAFF_USERS s ON oh.STAFF_USER_ID = s.USER_ID
+LEFT JOIN ORDER_ITEMS oi ON oh.ORDER_ID = oi.ORDER_ID
+WHERE oh.ORDER_STATUS IN ('OPEN', 'IN_PROGRESS', 'READY')
+GROUP BY oh.ORDER_ID, t.TABLE_NAME, oh.ORDER_STATUS, oh.ORDER_OPEN_TIME, 
+         oh.GUEST_COUNT, s.FIRST_NAME, s.LAST_NAME
+ORDER BY oh.ORDER_OPEN_TIME;
+
+
+
+-- Sales performance by hour
+SELECT 
+    DATEPART(HOUR, START_TIME) as HourOfDay,
+    COUNT(*) as ReceiptCount,
+    SUM(TOTAL_AMOUNT) as TotalSales,
+    AVG(TOTAL_AMOUNT) as AverageReceipt,
+    SUM(TOTAL_NET_AMOUNT) as NetSales,
+    SUM(TOTAL_VAT_AMOUNT) as TotalVAT
+FROM RECEIPT_HEADER
+WHERE CAST(START_TIME as DATE) = '2025-10-19'
+GROUP BY DATEPART(HOUR, START_TIME)
+ORDER BY HourOfDay;
+
+
+
+-- Top selling menu items
+SELECT 
+    mi.ITEM_NAME,
+    mi.ITEM_GROUP,
+    COUNT(rli.LINE_NUMBER) as TimesOrdered,
+    SUM(rli.QUANTITY) as TotalQuantity,
+    SUM(rli.QUANTITY * rli.UNIT_PRICE) as TotalRevenue,
+    ROUND(AVG(rli.UNIT_PRICE), 2) as AveragePrice
+FROM RECEIPT_LINE_ITEM rli
+JOIN MENU_ITEMS mi ON rli.MENU_ITEM_ID = mi.ITEM_ID
+JOIN RECEIPT_HEADER rh ON rli.RECEIPT_ID = rh.RECEIPT_ID
+WHERE CAST(rh.START_TIME as DATE) BETWEEN '2025-10-18' AND '2025-10-20'
+GROUP BY mi.ITEM_NAME, mi.ITEM_GROUP
+ORDER BY TotalRevenue DESC;
+
+
+-- Staff sales performance
+SELECT 
+    s.USER_ID,
+    CONCAT(s.FIRST_NAME, ' ', s.LAST_NAME) as StaffName,
+    s.ROLE,
+    COUNT(DISTINCT rh.RECEIPT_ID) as ReceiptsProcessed,
+    SUM(rh.TOTAL_AMOUNT) as TotalSales,
+    ROUND(AVG(rh.TOTAL_AMOUNT), 2) as AverageReceiptValue,
+    MIN(rh.START_TIME) as FirstReceipt,
+    MAX(rh.START_TIME) as LastReceipt
+FROM RECEIPT_HEADER rh
+JOIN STAFF_USERS s ON rh.STAFF_USER_ID = s.USER_ID
+WHERE CAST(rh.START_TIME as DATE) BETWEEN '2025-10-18' AND '2025-10-20'
+GROUP BY s.USER_ID, s.FIRST_NAME, s.LAST_NAME, s.ROLE
+ORDER BY TotalSales DESC;
+
+
+-- Export for German tax authorities (simplified)
+SELECT 
+    rh.RECEIPT_ID as BonId,
+    rh.REGISTER_SERIAL_NUMBER as KassenId,
+    rh.START_TIME as Belegzeitpunkt,
+    rh.TOTAL_AMOUNT as Bruttosumme,
+    rh.TOTAL_NET_AMOUNT as Nettosumme,
+    rh.TOTAL_VAT_AMOUNT as UstSumme,
+    rh.PROCESS_TYPE as Vorgangsart,
+    rh.RECEIPT_TYPE as Belegart,
+    tse.SIGNATURE_COUNTER as SigCounter,
+    tse.SIGNATURE_VALUE as SigValue,
+    tse.LOG_TIME as SigTime,
+    tse.TSE_SERIAL_NUMBER as TSE_ID
+FROM RECEIPT_HEADER rh
+JOIN TSE_LOG tse ON rh.RECEIPT_ID = tse.RECEIPT_ID
+WHERE CAST(rh.START_TIME as DATE) = '2025-10-19'
+ORDER BY rh.START_TIME;
