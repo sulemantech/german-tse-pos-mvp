@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/header';
 import TablesPanel from './components/TablesPanel';
 import OrderInterface from './components/OrderInterface';
 import PaymentTerminal from './components/PaymentTerminal';
 import FloatingActions from './components/FloatingActions';
+import KitchenView from './components/KitchenView';
+import Dashboard from './components/Dashboard';
 import { usePOS } from './hooks/usePOS';
 
-const App: React.FC = () => {
+// Main POS Component (your existing app)
+const POSInterface: React.FC = () => {
   const {
     tables,
     menuItems,
@@ -28,17 +32,11 @@ const App: React.FC = () => {
 
   const [showVoiceInterface, setShowVoiceInterface] = useState(false);
 
-  // Fix: Explicitly return Promise<void>
   const handleProcessPayment = async (paymentMethod: string): Promise<void> => {
     if (!currentTable) return;
     
-    // Generate TSE signature
     const tseSignature = `TSE_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Complete the order
     completeOrder(currentTable.id, paymentMethod, tseSignature);
-    
-    // Simulate processing delay - explicitly return void
     await new Promise<void>(resolve => setTimeout(resolve, 2000));
   };
 
@@ -139,6 +137,187 @@ const App: React.FC = () => {
         </div>
       )}
     </div>
+  );
+};
+
+// Updated Header with Navigation
+const NavigationHeader: React.FC = () => {
+  const location = useLocation();
+  
+  return (
+    <header className="bg-card backdrop-blur-xl border-b border-glass px-6 py-4">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-8">
+          <h1 className="text-2xl font-bold text-white">NEXUS POS</h1>
+          
+          <nav className="flex gap-4">
+            <a 
+              href="/" 
+              className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                location.pathname === '/' 
+                  ? 'bg-primary text-white shadow-glow-primary' 
+                  : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+              }`}
+            >
+              🏠 POS Interface
+            </a>
+            
+            <a 
+              href="/kitchen" 
+              className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                location.pathname === '/kitchen' 
+                  ? 'bg-orange-500 text-white shadow-glow' 
+                  : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+              }`}
+            >
+              👨‍🍳 Kitchen Display
+            </a>
+
+            {/* Add Dashboard Link */}
+            <a 
+              href="/dashboard" 
+              className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                location.pathname === '/dashboard' 
+                  ? 'bg-purple-500 text-white shadow-glow' 
+                  : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+              }`}
+            >
+              📊 Dashboard
+            </a>
+          </nav>
+        </div>
+        
+        <div className="text-gray-400 text-sm">
+          {new Date().toLocaleTimeString()}
+        </div>
+      </div>
+    </header>
+  );
+};
+
+// Updated FloatingActions with Dashboard Link
+const NavigationFloatingActions: React.FC<{ 
+  onVoiceCommand: () => void; 
+  onAIAssistant: () => void; 
+  onAnalytics: () => void;
+}> = ({
+  onVoiceCommand,
+  onAIAssistant,
+  onAnalytics
+}) => {
+  const location = useLocation();
+
+  return (
+    <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
+      {/* Dashboard Button */}
+      <a 
+        href="/dashboard"
+        className={`w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-200 hover:scale-110 ${
+          location.pathname === '/dashboard' 
+            ? 'bg-purple-500' 
+            : 'bg-purple-600 hover:bg-purple-500'
+        }`}
+        title="Dashboard & Analytics"
+      >
+        📊
+      </a>
+
+      {/* Kitchen Button */}
+      <a 
+        href="/kitchen"
+        className={`w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-200 hover:scale-110 ${
+          location.pathname === '/kitchen' 
+            ? 'bg-orange-500' 
+            : 'bg-orange-600 hover:bg-orange-500'
+        }`}
+        title="Kitchen Display"
+      >
+        👨‍🍳
+      </a>
+      
+      <button
+        onClick={onVoiceCommand}
+        className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-200 hover:scale-110"
+        title="Voice Commands"
+      >
+        🎤
+      </button>
+      
+      <button
+        onClick={onAIAssistant}
+        className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-200 hover:scale-110"
+        title="AI Assistant"
+      >
+        🧠
+      </button>
+      
+      <button
+        onClick={onAnalytics}
+        className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-200 hover:scale-110"
+        title="Quick Analytics"
+      >
+        📈
+      </button>
+    </div>
+  );
+};
+
+// Helper function to extract all orders from tables
+const getAllOrders = (tables: any[]) => {
+  return tables.flatMap(table => table.orderHistory);
+};
+
+// Main App Component with Router
+const App: React.FC = () => {
+  const {
+    tables,
+    menuItems,
+    currentOrder,
+    completeOrder,
+    updateQuantity,
+    onPriorityChange
+  } = usePOS();
+
+  // Get all orders for dashboard
+  const allOrders = getAllOrders(tables);
+
+  return (
+    <Router>
+      {/* Global Navigation Header and Floating Actions - Available on ALL pages */}
+      <div className="min-h-screen bg-gray-900">
+        <NavigationHeader />
+        <NavigationFloatingActions 
+          onVoiceCommand={() => {}}
+          onAIAssistant={() => {}}
+          onAnalytics={() => {}}
+        />
+        
+        <Routes>
+          {/* Main POS Interface */}
+          <Route path="/" element={<POSInterface />} />
+          
+          {/* Kitchen Display - Full Screen */}
+          <Route path="/kitchen" element={
+            <KitchenView
+              orders={[currentOrder].filter(Boolean) as any[]}
+              tables={tables}
+              onUpdateItemStatus={updateQuantity}
+              onCompleteOrder={completeOrder}
+              onPriorityChange={onPriorityChange}
+            />
+          } />
+
+          {/* Dashboard - Analytics & Management */}
+          <Route path="/dashboard" element={
+            <Dashboard
+              tables={tables}
+              menuItems={menuItems}
+              orders={allOrders}
+            />
+          } />
+        </Routes>
+      </div>
+    </Router>
   );
 };
 
