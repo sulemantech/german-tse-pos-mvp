@@ -117,15 +117,15 @@ const KitchenView: React.FC<KitchenViewProps> = ({
   };
 
   const KitchenOrderCard = ({ kitchenOrder }: { kitchenOrder: KitchenOrder }) => {
-    const isAllReady = kitchenOrder.items.every(item => item.status === 'ready');
-    
-    return (
-      <div className={`bg-gray-800/50 border rounded-lg p-3 transition-all duration-200 ${
-        isAllReady ? 'border-green-500 shadow-lg shadow-green-500/20' :
-        kitchenOrder.order.priority === 'urgent' ? 'border-red-500 shadow-lg shadow-red-500/20' :
-        kitchenOrder.order.priority === 'high' ? 'border-orange-500' :
-        'border-gray-600 hover:border-gray-500'
-      }`}>
+  const isAllReady = kitchenOrder.items.every(item => item.status === 'ready');
+  
+  return (
+    <div className={`bg-gray-800/50 border rounded-lg p-3 transition-all duration-200 ${
+      isAllReady ? 'border-green-500 shadow-lg shadow-green-500/20' :
+      (kitchenOrder.order.priority === 'normal') ? 'border-red-500 shadow-lg shadow-red-500/20' :
+      kitchenOrder.order.priority === 'high' ? 'border-orange-500' :
+      'border-gray-600 hover:border-gray-500'
+    }`}>
         {/* Header */}
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">

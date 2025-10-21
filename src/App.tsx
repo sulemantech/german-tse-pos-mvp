@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Header from './components/header';
+import Header from './components/Header';
 import TablesPanel from './components/TablesPanel';
 import OrderInterface from './components/OrderInterface';
 import PaymentTerminal from './components/PaymentTerminal';
