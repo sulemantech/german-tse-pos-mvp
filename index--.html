@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS POS | Intelligent Restaurant System</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --darker: #020617;
+            --light: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --glass: rgba(255, 255, 255, 0.1);
+            --glow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) rgba(15, 23, 42, 0.8);
+        }
+
+        /* Custom Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .nexus-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 380px; /* Reduced side panels, increased middle */
+            grid-template-rows: 70px 1fr; /* Smaller header */
+            height: 100vh;
+            gap: 1px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+        }
+
+        /* Compact Header */
+        .nexus-header {
+            grid-column: 1 / -1;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(99, 102, 241, 0.1) 50%, 
+                transparent 100%);
+            animation: glowMove 3s ease-in-out infinite;
+        }
+
+        @keyframes glowMove {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3em;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.8em;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Compact Tables Panel */
+        .tables-holo {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass);
+            padding: 15px;
+            overflow-y: auto;
+            height: calc(100vh - 70px);
+        }
+
+        .holo-section {
+            background: var(--glass);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: var(--glow);
+        }
+
+        .holo-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Single column for compactness */
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .holo-table {
+            background: linear-gradient(135deg, var(--card-bg) 0%, transparent 100%);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .holo-table:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            border-color: var(--primary);
+        }
+
+        .table-badge {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .badge-occupied { background: var(--secondary); }
+        .badge-reserved { background: var(--accent); }
+        .badge-alert { background: var(--danger); animation: pulse 2s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* EXPANDED Neural Order Interface */
+        .neural-interface {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: calc(100vh - 70px);
+            overflow: hidden;
+        }
+
+        .neural-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: var(--glass);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .neural-order {
+            flex: 1;
+            background: var(--glass);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            gap: 15px;
+        }
+
+        .order-stream {
+            flex: 0 0 auto;
+            overflow-y: auto;
+            max-height: 150px; /* Smaller order display */
+            min-height: 80px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .stream-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+            transition: all 0.2s ease;
+        }
+
+        .stream-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .item-neural {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .neural-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .neural-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 0.9em;
+        }
+
+        .neural-btn:hover {
+            background: var(--primary);
+            transform: scale(1.05);
+        }
+
+        /* Enhanced Menu Categories */
+        .menu-categories {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .category-btn {
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--light);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .category-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+        }
+
+        /* EXPANDED Quantum Menu - More Space */
+        .quantum-menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* More items per row */
+            gap: 12px;
+            overflow-y: auto;
+            flex: 1;
+            padding: 5px;
+            align-content: start;
+        }
+
+        .quantum-item {
+            background: linear-gradient(135deg, var(--card-bg) 0%, transparent 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quantum-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+            border-color: var(--primary);
+        }
+
+        .item-icon {
+            font-size: 1.8em; /* Larger icons */
+            margin-bottom: 5px;
+        }
+
+        .item-name {
+            font-weight: 600;
+            font-size: 0.95em;
+            line-height: 1.2;
+        }
+
+        .item-price {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 1em;
+        }
+
+        .item-vat {
+            font-size: 0.75em;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Compact Payment Terminal */
+        .ai-terminal {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--glass);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: calc(100vh - 70px);
+            overflow-y: auto;
+        }
+
+        .terminal-display {
+            background: linear-gradient(135deg, var(--dark) 0%, var(--darker) 100%);
+            border: 1px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            flex: 1;
+            box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .holographic-total {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .total-amount {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+        }
+
+        .vat-breakdown {
+            margin: 15px 0;
+        }
+
+        .vat-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9em;
+        }
+
+        .vat-line.total {
+            border-top: 2px solid var(--primary);
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .quantum-payment {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .quantum-pay-btn {
+            background: linear-gradient(135deg, var(--card-bg) 0%, transparent 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quantum-pay-btn:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .tse-neural {
+            background: var(--glass);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: auto;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            font-size: 0.85em;
+        }
+
+        .neural-wave {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .wave-animation {
+            flex: 1;
+            height: 3px;
+            background: linear-gradient(90deg, var(--secondary), transparent);
+            border-radius: 2px;
+            animation: wave 1.5s ease-in-out infinite;
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: scaleX(0.5); opacity: 0.5; }
+            50% { transform: scaleX(1); opacity: 1; }
+        }
+
+        /* Quick Action Buttons */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .quick-btn {
+            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--light);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.8em;
+            text-align: center;
+        }
+
+        .quick-btn:hover {
+            background: var(--primary);
+            transform: scale(1.05);
+        }
+
+        /* Floating Action Buttons */
+        .fab-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .fab {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            font-size: 1.1em;
+        }
+
+        .fab:hover {
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        }
+
+        /* AI Suggestions */
+        .ai-suggestions {
+            margin-top: 15px;
+        }
+
+        .suggestion-item {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 0.85em;
+        }
+
+        .suggestion-badge {
+            background: var(--secondary);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            margin-right: 6px;
+        }
+
+        /* Guest Counter */
+        .guest-counter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+        }
+
+        .time-active {
+            color: var(--accent);
+            font-size: 0.8em;
+        }
+
+        .item-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-notes {
+            font-size: 0.75em;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .quantity-display {
+            font-weight: 600;
+            color: var(--accent);
+            font-size: 0.9em;
+        }
+
+        /* Table info compact */
+        .table-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .table-name {
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .table-status {
+            font-size: 0.75em;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .table-guests, .table-timer {
+            font-size: 0.75em;
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="nexus-container">
+        <!-- Compact Header -->
+        <header class="nexus-header">
+            <div class="header-glow"></div>
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                NEXUS POS
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <div class="stat-label">ACTIVE ORDERS</div>
+                    <div class="stat-value">12</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">TODAY'S REVENUE</div>
+                    <div class="stat-value">€2,847</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">TSE SIGNATURES</div>
+                    <div class="stat-value">1,247</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">AI RECOMMENDATIONS</div>
+                    <div class="stat-value">86%</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Compact Tables Panel -->
+        <aside class="tables-holo" id="tablesPanel">
+            <!-- Tables will be populated by JavaScript -->
+        </aside>
+
+        <!-- EXPANDED Neural Order Interface -->
+        <main class="neural-interface">
+            <div class="neural-header">
+                <h2 id="currentTableTitle">SELECT A TABLE</h2>
+                <div class="neural-controls">
+                    <div class="guest-counter" id="guestCounter">
+                        <!-- Guest info will be populated -->
+                    </div>
+                    <button class="neural-btn">🧠</button>
+                    <button class="neural-btn">🎤</button>
+                </div>
+            </div>
+
+            <div class="neural-order">
+                <div class="order-stream" id="orderStream">
+                    <!-- Order items will be populated here -->
+                    <div class="stream-item">
+                        <div class="item-neural">
+                            <div class="item-name">Please select a table to view order</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="menu-categories" id="menuCategories">
+                    <!-- Categories will be populated -->
+                </div>
+
+                <div class="quantum-menu" id="quantumMenu">
+                    <!-- Menu items will be populated -->
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <button class="quick-btn" onclick="addQuickItem('DRINK_WATER')">💧 Water</button>
+                    <button class="quick-btn" onclick="addQuickItem('DRINK_BEER_05')">🍺 Beer</button>
+                    <button class="quick-btn" onclick="addQuickItem('DRINK_COFFEE')">☕ Coffee</button>
+                    <button class="quick-btn" onclick="addQuickItem('MAIN_BURGER')">🍔 Burger</button>
+                    <button class="quick-btn" onclick="addQuickItem('MAIN_PIZZA')">🍕 Pizza</button>
+                    <button class="quick-btn" onclick="addQuickItem('DESSERT_CAKE')">🍰 Cake</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Compact Payment Terminal -->
+        <aside class="ai-terminal">
+            <div class="terminal-display">
+                <div class="holographic-total">
+                    <div class="total-label">AMOUNT DUE</div>
+                    <div class="total-amount" id="totalAmount">€0.00</div>
+                </div>
+
+                <div class="vat-breakdown" id="vatBreakdown">
+                    <!-- VAT breakdown will be populated -->
+                </div>
+
+                <div class="quantum-payment">
+                    <div class="quantum-pay-btn">
+                        <div class="pay-icon">💵</div>
+                        <div class="pay-label">Cash</div>
+                    </div>
+                    <div class="quantum-pay-btn">
+                        <div class="pay-icon">💳</div>
+                        <div class="pay-label">Card</div>
+                    </div>
+                    <div class="quantum-pay-btn">
+                        <div class="pay-icon">📱</div>
+                        <div class="pay-label">Mobile</div>
+                    </div>
+                    <div class="quantum-pay-btn">
+                        <div class="pay-icon">🎫</div>
+                        <div class="pay-label">Split</div>
+                    </div>
+                </div>
+
+                <div class="ai-suggestions" id="aiSuggestions">
+                    <!-- AI suggestions will be populated -->
+                </div>
+            </div>
+
+            <div class="tse-neural" id="tseNeural">
+                <div class="neural-wave">
+                    <div class="wave-icon">🔒</div>
+                    <div class="wave-animation"></div>
+                    <div class="wave-status">TSE ACTIVE</div>
+                </div>
+                <div class="tse-details">
+                    <div>Signature #1,248 Ready</div>
+                    <div>Certificate Valid Until 2026-12-31</div>
+                </div>
+            </div>
+
+            <button class="quantum-pay-btn" style="grid-column: 1 / -1; background: linear-gradient(135deg, var(--secondary), var(--primary));" id="processPaymentBtn">
+                <div class="pay-icon">⚡</div>
+                <div class="pay-label">PROCESS PAYMENT</div>
+            </button>
+        </aside>
+    </div>
+
+    <!-- Floating Action Buttons -->
+    <div class="fab-container">
+        <button class="fab fab-pulse" onclick="toggleVoice()">
+            🎤
+        </button>
+        <button class="fab" onclick="showAIAssistant()">
+            🧠
+        </button>
+        <button class="fab" onclick="showAnalytics()">
+            📊
+        </button>
+    </div>
+
+    <script>
+        // Enhanced Data Structure with Real Orders
+        const tables = [
+            { 
+                id: 'TABLE_01', 
+                name: 'Table 1 - Window', 
+                status: 'occupied', 
+                guests: 2, 
+                orderId: 'ORDER_20251020_001',
+                location: 'Main Dining',
+                waiter: 'Anna Schmidt',
+                order: {
+                    items: [
+                        { id: 'DRINK_WATER', name: 'Mineral Water 0.5L', quantity: 2, price: 3.50, vat: 7, notes: 'No gas' },
+                        { id: 'DRINK_BEER_05', name: 'Pilsner 0.5L', quantity: 2, price: 4.80, vat: 7 },
+                        { id: 'MAIN_SCHNITZEL', name: 'Wiener Schnitzel', quantity: 1, price: 18.90, vat: 19, notes: 'With lemon' }
+                    ],
+                    startTime: '2025-10-20T12:30:00',
+                    total: 45.60
+                }
+            },
+            { 
+                id: 'TABLE_02', 
+                name: 'Table 2 - Center', 
+                status: 'occupied', 
+                guests: 4, 
+                orderId: 'ORDER_20251020_002',
+                location: 'Main Dining',
+                waiter: 'Thomas Müller',
+                order: {
+                    items: [
+                        { id: 'DESSERT_CAKE', name: 'Cake of the Day', quantity: 1, price: 4.80, vat: 19 }
+                    ],
+                    startTime: '2025-10-20T13:15:00',
+                    total: 4.80
+                }
+            },
+            { 
+                id: 'TABLE_03', 
+                name: 'Table 3 - Corner', 
+                status: 'free', 
+                guests: 0,
+                location: 'Main Dining'
+            },
+            { 
+                id: 'TABLE_11', 
+                name: 'Terrace 1', 
+                status: 'occupied', 
+                guests: 3, 
+                orderId: 'ORDER_20251020_003',
+                location: 'Terrace',
+                waiter: 'Sarah Weber',
+                order: {
+                    items: [
+                        { id: 'DRINK_WHISKY', name: 'Whisky 2cl', quantity: 2, price: 6.50, vat: 7 },
+                        { id: 'DRINK_BEER_03', name: 'Pilsner 0.3L', quantity: 1, price: 3.80, vat: 7 },
+                        { id: 'APP_SALAD', name: 'Mixed Salad', quantity: 1, price: 8.50, vat: 19 }
+                    ],
+                    startTime: '2025-10-20T14:00:00',
+                    total: 25.30
+                }
+            }
+        ];
+
+        const menuItems = [
+            { id: 'DRINK_WATER', name: 'Mineral Water 0.5L', category: 'Drinks', price: 3.50, vat: 7, icon: '🥤' },
+            { id: 'DRINK_WATER_1L', name: 'Mineral Water 1.0L', category: 'Drinks', price: 5.50, vat: 7, icon: '💧' },
+            { id: 'DRINK_BEER_05', name: 'Pilsner 0.5L', category: 'Drinks', price: 4.80, vat: 7, icon: '🍺' },
+            { id: 'DRINK_BEER_03', name: 'Pilsner 0.3L', category: 'Drinks', price: 3.80, vat: 7, icon: '🍻' },
+            { id: 'DRINK_WHISKY', name: 'Whisky 2cl', category: 'Drinks', price: 6.50, vat: 7, icon: '🥃' },
+            { id: 'DRINK_COFFEE', name: 'Coffee', category: 'Drinks', price: 3.00, vat: 7, icon: '☕' },
+            { id: 'DRINK_WINE_RED', name: 'Red Wine Glass', category: 'Drinks', price: 7.50, vat: 7, icon: '🍷' },
+            { id: 'DRINK_WINE_WHITE', name: 'White Wine Glass', category: 'Drinks', price: 6.80, vat: 7, icon: '🥂' },
+            { id: 'DRINK_COCKTAIL', name: 'Signature Cocktail', category: 'Drinks', price: 12.00, vat: 7, icon: '🍸' },
+            { id: 'MAIN_SCHNITZEL', name: 'Wiener Schnitzel', category: 'Main Courses', price: 18.90, vat: 19, icon: '🍖' },
+            { id: 'MAIN_BURGER', name: 'Homemade Burger', category: 'Main Courses', price: 16.50, vat: 19, icon: '🍔' },
+            { id: 'MAIN_PIZZA', name: 'Pizza Margherita', category: 'Main Courses', price: 12.90, vat: 19, icon: '🍕' },
+            { id: 'MAIN_PASTA', name: 'Spaghetti Carbonara', category: 'Main Courses', price: 14.80, vat: 19, icon: '🍝' },
+            { id: 'MAIN_STEAK', name: 'Ribeye Steak', category: 'Main Courses', price: 24.90, vat: 19, icon: '🥩' },
+            { id: 'MAIN_FISH', name: 'Grilled Salmon', category: 'Main Courses', price: 19.50, vat: 19, icon: '🐟' },
+            { id: 'APP_SALAD', name: 'Mixed Salad', category: 'Appetizers', price: 8.50, vat: 19, icon: '🥗' },
+            { id: 'APP_SOUP', name: 'Soup of the Day', category: 'Appetizers', price: 6.50, vat: 19, icon: '🍲' },
+            { id: 'APP_BRUSCHETTA', name: 'Bruschetta', category: 'Appetizers', price: 7.90, vat: 19, icon: '🍞' },
+            { id: 'DESSERT_ICE', name: 'Ice Cream Sundae', category: 'Desserts', price: 6.50, vat: 19, icon: '🍨' },
+            { id: 'DESSERT_CAKE', name: 'Cake of the Day', category: 'Desserts', price: 4.80, vat: 19, icon: '🍰' },
+            { id: 'DESSERT_CREME', name: 'Crème Brûlée', category: 'Desserts', price: 7.20, vat: 19, icon: '🍮' }
+        ];
+
+        let currentTable = null;
+
+        // Initialize POS
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTables();
+            loadMenuCategories();
+            loadMenuItems();
+            setupEventListeners();
+            
+            // Auto-select first occupied table
+            const firstOccupied = tables.find(table => table.status === 'occupied');
+            if (firstOccupied) {
+                selectTable(firstOccupied);
+            }
+        });
+
+        function loadTables() {
+            const tableGrid = document.getElementById('tablesPanel');
+            tableGrid.innerHTML = '';
+            
+            // Group tables by location
+            const locations = {};
+            tables.forEach(table => {
+                if (!locations[table.location]) {
+                    locations[table.location] = [];
+                }
+                locations[table.location].push(table);
+            });
+            
+            // Create sections for each location
+            Object.keys(locations).forEach(location => {
+                const section = document.createElement('div');
+                section.className = 'holo-section';
+                section.innerHTML = `<h3>${location.toUpperCase()}</h3>`;
+                
+                const grid = document.createElement('div');
+                grid.className = 'holo-grid';
+                
+                locations[location].forEach(table => {
+                    const tableCard = createTableCard(table);
+                    grid.appendChild(tableCard);
+                });
+                
+                section.appendChild(grid);
+                tableGrid.appendChild(section);
+            });
+        }
+
+        function createTableCard(table) {
+            const tableCard = document.createElement('div');
+            tableCard.className = `holo-table ${table.status === 'occupied' && currentTable?.id === table.id ? 'active' : ''}`;
+            tableCard.innerHTML = `
+                ${table.status === 'occupied' ? `<div class="table-badge badge-occupied"></div>` : ''}
+                ${table.status === 'reserved' ? `<div class="table-badge badge-reserved"></div>` : ''}
+                <div class="table-info">
+                    <div class="table-name">${table.name}</div>
+                    <div class="table-status">${getTableStatusText(table)}</div>
+                </div>
+                ${table.guests > 0 ? `<div class="table-guests">👥${table.guests}</div>` : ''}
+                ${table.order ? `<div class="table-timer">${getOrderDuration(table.order.startTime)}</div>` : ''}
+            `;
+            
+            tableCard.addEventListener('click', () => selectTable(table));
+            return tableCard;
+        }
+
+        function getTableStatusText(table) {
+            switch(table.status) {
+                case 'occupied': return 'OCCUPIED';
+                case 'free': return 'AVAILABLE';
+                case 'reserved': return 'RESERVED';
+                default: return table.status.toUpperCase();
+            }
+        }
+
+        function getOrderDuration(startTime) {
+            const start = new Date(startTime);
+            const now = new Date();
+            const diff = Math.floor((now - start) / 60000); // minutes
+            return `${diff}m`;
+        }
+
+        function selectTable(table) {
+            currentTable = table;
+            
+            // Update all table cards
+            document.querySelectorAll('.holo-table').forEach(card => {
+                card.classList.remove('active');
+            });
+            
+            // Find and activate the clicked table
+            document.querySelectorAll('.holo-table').forEach(card => {
+                if (card.querySelector('.table-name').textContent === table.name) {
+                    card.classList.add('active');
+                }
+            });
+            
+            // Update order interface
+            updateOrderInterface(table);
+            
+            // Update header
+            document.getElementById('currentTableTitle').textContent = `${table.name}`;
+            
+            // Update guest counter
+            const guestCounter = document.getElementById('guestCounter');
+            if (guestCounter) {
+                if (table.status === 'occupied') {
+                    guestCounter.innerHTML = `<span>👥 ${table.guests} GUESTS</span>
+                                             <span class="time-active">• ${getOrderDuration(table.order.startTime)} ACTIVE</span>`;
+                } else {
+                    guestCounter.innerHTML = `<span>TABLE AVAILABLE</span>`;
+                }
+            }
+            
+            // Update payment terminal
+            updatePaymentTerminal(table);
+            
+            // Update AI suggestions
+            updateAISuggestions(table);
+        }
+
+        function updateOrderInterface(table) {
+            const orderStream = document.getElementById('orderStream');
+            
+            if (table.status !== 'occupied' || !table.order) {
+                orderStream.innerHTML = '<div class="stream-item"><div class="item-neural"><div class="item-name">No active order - Table is available</div></div></div>';
+                return;
+            }
+            
+            orderStream.innerHTML = '';
+            
+            table.order.items.forEach((item, index) => {
+                const streamItem = document.createElement('div');
+                streamItem.className = 'stream-item';
+                streamItem.innerHTML = `
+                    <div class="item-neural">
+                        <div class="item-icon">${getItemIcon(item.id)}</div>
+                        <div class="item-details">
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-notes">${item.notes || ''} • VAT ${item.vat}%</div>
+                        </div>
+                    </div>
+                    <div class="neural-controls">
+                        <div class="quantity-display">${item.quantity} × €${item.price.toFixed(2)}</div>
+                        <button class="neural-btn" onclick="updateQuantity(${index}, -1)">−</button>
+                        <button class="neural-btn" onclick="updateQuantity(${index}, 1)">+</button>
+                        <button class="neural-btn" style="color: var(--danger);" onclick="removeItem(${index})">×</button>
+                    </div>
+                `;
+                orderStream.appendChild(streamItem);
+            });
+        }
+
+        function getItemIcon(itemId) {
+            const item = menuItems.find(mi => mi.id === itemId);
+            return item ? item.icon : '📦';
+        }
+
+        function updateQuantity(itemIndex, change) {
+            if (!currentTable || !currentTable.order) return;
+            
+            const item = currentTable.order.items[itemIndex];
+            item.quantity += change;
+            
+            if (item.quantity <= 0) {
+                currentTable.order.items.splice(itemIndex, 1);
+            }
+            
+            // Recalculate total
+            currentTable.order.total = currentTable.order.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            
+            // Update UI
+            updateOrderInterface(currentTable);
+            updatePaymentTerminal(currentTable);
+        }
+
+        function removeItem(itemIndex) {
+            if (!currentTable || !currentTable.order) return;
+            
+            currentTable.order.items.splice(itemIndex, 1);
+            currentTable.order.total = currentTable.order.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            
+            updateOrderInterface(currentTable);
+            updatePaymentTerminal(currentTable);
+        }
+
+        function updatePaymentTerminal(table) {
+            const totalAmount = document.getElementById('totalAmount');
+            const vatBreakdown = document.getElementById('vatBreakdown');
+            
+            if (!table.order) {
+                totalAmount.textContent = '€0.00';
+                vatBreakdown.innerHTML = '<div class="vat-line"><span>Select a table with active order</span></div>';
+                return;
+            }
+            
+            const total = table.order.total;
+            totalAmount.textContent = `€${total.toFixed(2)}`;
+            
+            // Calculate VAT breakdown
+            const breakdown = calculateVATBreakdown(table.order.items);
+            updateVATDisplay(breakdown);
+        }
+
+        function calculateVATBreakdown(items) {
+            const breakdown = { vat7: 0, vat19: 0, net7: 0, net19: 0 };
+            
+            items.forEach(item => {
+                const netPrice = (item.quantity * item.price) / (1 + item.vat/100);
+                const vatAmount = (item.quantity * item.price) - netPrice;
+                
+                if (item.vat === 7) {
+                    breakdown.net7 += netPrice;
+                    breakdown.vat7 += vatAmount;
+                } else if (item.vat === 19) {
+                    breakdown.net19 += netPrice;
+                    breakdown.vat19 += vatAmount;
+                }
+            });
+            
+            return breakdown;
+        }
+
+        function updateVATDisplay(breakdown) {
+            const vatContainer = document.getElementById('vatBreakdown');
+            vatContainer.innerHTML = `
+                <div class="vat-line">
+                    <span>Net Amount (19%):</span>
+                    <span>€${breakdown.net19.toFixed(2)}</span>
+                </div>
+                <div class="vat-line">
+                    <span>Net Amount (7%):</span>
+                    <span>€${breakdown.net7.toFixed(2)}</span>
+                </div>
+                <div class="vat-line total">
+                    <span>Total VAT:</span>
+                    <span>€${(breakdown.vat19 + breakdown.vat7).toFixed(2)}</span>
+                </div>
+            `;
+        }
+
+        function updateAISuggestions(table) {
+            const aiSuggestions = document.getElementById('aiSuggestions');
+            
+            if (!table.order || table.order.items.length === 0) {
+                aiSuggestions.innerHTML = `
+                    <div class="suggestion-item">
+                        <span class="suggestion-badge">AI TIP</span>
+                        <span>Start with popular drinks - 85% acceptance rate</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Simple AI logic based on current order
+            const hasMainCourse = table.order.items.some(item => item.category === 'Main Courses');
+            const hasDessert = table.order.items.some(item => item.category === 'Desserts');
+            const hasDrinks = table.order.items.some(item => item.category === 'Drinks');
+            
+            let suggestion = '';
+            if (!hasMainCourse) {
+                suggestion = 'Suggest main courses - customers typically order within 15 minutes';
+            } else if (!hasDessert && hasMainCourse) {
+                suggestion = 'Recommend desserts - 68% order rate after main courses';
+            } else if (!hasDrinks) {
+                suggestion = 'Offer drink pairings - increases total by 23% on average';
+            } else {
+                suggestion = 'Premium wine pairing available - €28 bottle increases satisfaction by 42%';
+            }
+            
+            aiSuggestions.innerHTML = `
+                <div class="suggestion-item">
+                    <span class="suggestion-badge">AI TIP</span>
+                    <span>${suggestion}</span>
+                </div>
+            `;
+        }
+
+        function loadMenuCategories() {
+            const categoriesContainer = document.getElementById('menuCategories');
+            const categories = ['All', 'Drinks', 'Appetizers', 'Main Courses', 'Desserts'];
+            categoriesContainer.innerHTML = '';
+            
+            categories.forEach(category => {
+                const button = document.createElement('button');
+                button.className = 'category-btn';
+                button.textContent = category;
+                button.addEventListener('click', (e) => filterMenuByCategory(category, e));
+                categoriesContainer.appendChild(button);
+            });
+            
+            // Activate 'All' by default
+            categoriesContainer.querySelector('.category-btn').classList.add('active');
+        }
+
+        function loadMenuItems(category = 'All') {
+            const menuGrid = document.getElementById('quantumMenu');
+            const filteredItems = category === 'All' ? menuItems : menuItems.filter(item => item.category === category);
+            
+            menuGrid.innerHTML = '';
+            
+            filteredItems.forEach(item => {
+                const menuItem = document.createElement('div');
+                menuItem.className = 'quantum-item';
+                menuItem.innerHTML = `
+                    <div class="item-icon">${item.icon}</div>
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-price">€${item.price.toFixed(2)}</div>
+                    <div class="item-vat">VAT ${item.vat}%</div>
+                `;
+                menuItem.addEventListener('click', () => addToOrder(item));
+                menuGrid.appendChild(menuItem);
+            });
+        }
+
+        function addToOrder(menuItem) {
+            if (!currentTable || currentTable.status !== 'occupied') {
+                showAIConfirmation('Please select an occupied table first');
+                return;
+            }
+            
+            // Initialize order if it doesn't exist
+            if (!currentTable.order) {
+                currentTable.order = {
+                    items: [],
+                    startTime: new Date().toISOString(),
+                    total: 0
+                };
+            }
+            
+            // Check if item already exists in order
+            const existingItem = currentTable.order.items.find(item => item.id === menuItem.id);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                currentTable.order.items.push({
+                    id: menuItem.id,
+                    name: menuItem.name,
+                    quantity: 1,
+                    price: menuItem.price,
+                    vat: menuItem.vat,
+                    icon: menuItem.icon,
+                    category: menuItem.category
+                });
+            }
+            
+            // Update total
+            currentTable.order.total = currentTable.order.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            
+            // Update UI
+            updateOrderInterface(currentTable);
+            updatePaymentTerminal(currentTable);
+            updateAISuggestions(currentTable);
+            
+            // Show confirmation
+            showAIConfirmation(`Added ${menuItem.name} to ${currentTable.name}`);
+        }
+
+        // Quick action function
+        function addQuickItem(itemId) {
+            const menuItem = menuItems.find(item => item.id === itemId);
+            if (menuItem) {
+                addToOrder(menuItem);
+            }
+        }
+
+        function filterMenuByCategory(category, event) {
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            loadMenuItems(category);
+        }
+
+        function setupEventListeners() {
+            // Payment processing
+            document.getElementById('processPaymentBtn').addEventListener('click', processPayment);
+            
+            // Payment method selection
+            document.querySelectorAll('.quantum-pay-btn').forEach(btn => {
+                if (!btn.querySelector('.pay-label').textContent.includes('PROCESS')) {
+                    btn.addEventListener('click', function() {
+                        document.querySelectorAll('.quantum-pay-btn').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                    });
+                }
+            });
+        }
+
+        function processPayment() {
+            if (!currentTable || !currentTable.order) {
+                showAIConfirmation('No active order to process');
+                return;
+            }
+            
+            // Simulate TSE processing
+            const tseNeural = document.getElementById('tseNeural');
+            tseNeural.innerHTML = `
+                <div class="neural-wave">
+                    <div class="wave-icon">⚡</div>
+                    <div class="wave-animation"></div>
+                    <div class="wave-status">PROCESSING TSE SIGNATURE</div>
+                </div>
+                <div class="tse-details">Signing receipt #1,248...</div>
+            `;
+            
+            setTimeout(() => {
+                tseNeural.innerHTML = `
+                    <div class="neural-wave">
+                        <div class="wave-icon">✅</div>
+                        <div class="wave-status">PAYMENT COMPLETE</div>
+                    </div>
+                    <div class="tse-details">
+                        <div>Receipt #BON_${Date.now()} signed</div>
+                        <div>TSE Signature: #1,248 verified</div>
+                        <div>Amount: €${currentTable.order.total.toFixed(2)}</div>
+                    </div>
+                `;
+                
+                // Show confirmation
+                showAIConfirmation(`Payment of €${currentTable.order.total.toFixed(2)} processed for ${currentTable.name}`);
+                
+                // Reset table after 3 seconds
+                setTimeout(() => {
+                    // In a real app, you'd archive the order and reset the table
+                    currentTable.status = 'free';
+                    currentTable.order = null;
+                    currentTable.guests = 0;
+                    
+                    // Update UI
+                    loadTables();
+                    updateOrderInterface(currentTable);
+                    updatePaymentTerminal(currentTable);
+                    updateAISuggestions(currentTable);
+                    
+                    // Reset TSE display
+                    tseNeural.innerHTML = `
+                        <div class="neural-wave">
+                            <div class="wave-icon">🔒</div>
+                            <div class="wave-animation"></div>
+                            <div class="wave-status">TSE ACTIVE</div>
+                        </div>
+                        <div class="tse-details">
+                            <div>Signature #1,249 Ready</div>
+                            <div>Certificate Valid Until 2026-12-31</div>
+                        </div>
+                    `;
+                }, 3000);
+                
+            }, 2000);
+        }
+
+        function showAIConfirmation(message) {
+            // Create temporary notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: var(--secondary);
+                color: white;
+                padding: 12px 16px;
+                border-radius: 8px;
+                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+                font-size: 0.9em;
+            `;
+            notification.textContent = `🧠 ${message}`;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 2000);
+        }
+
+        // Add the slideIn animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Voice command function
+        function toggleVoice() {
+            const voiceInterface = document.getElementById('voiceInterface');
+            voiceInterface.style.display = voiceInterface.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function showAIAssistant() {
+            showAIConfirmation('AI Assistant: I can help optimize table turnover and suggest menu items based on current trends.');
+        }
+
+        function showAnalytics() {
+            showAIConfirmation('Real-time Analytics: Table turnover 42min avg • Popular items: Burger, Wine • Staff efficiency: 94%');
+        }
+
+        // Simulate real-time updates
+        setInterval(() => {
+            // Update table timers
+            document.querySelectorAll('.table-timer').forEach(timer => {
+                const currentTime = parseInt(timer.textContent) + 1;
+                timer.textContent = currentTime + 'm';
+            });
+            
+            // Update guest counter if table is active
+            if (currentTable && currentTable.order) {
+                const guestCounter = document.getElementById('guestCounter');
+                if (guestCounter) {
+                    guestCounter.innerHTML = `<span>👥 ${currentTable.guests} GUESTS</span>
+                                             <span class="time-active">• ${getOrderDuration(currentTable.order.startTime)} ACTIVE</span>`;
+                }
+            }
+        }, 60000);
+    </script>
+</body>
+</html>

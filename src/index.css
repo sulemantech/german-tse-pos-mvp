@@ -1,0 +1,244 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS variables for consistency */
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary: #10b981;
+  --accent: #f59e0b;
+  --danger: #ef4444;
+  --dark: #0f172a;
+  --darker: #020617;
+  --light: #f8fafc;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --glass: rgba(255, 255, 255, 0.1);
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+}
+
+/* Custom component classes */
+@layer components {
+  .nexus-container {
+    @apply grid grid-cols-[280px,1fr,380px] grid-rows-[70px,1fr] h-screen gap-px bg-gradient-to-br from-blue-500/10 to-green-500/10;
+  }
+  
+  .glass-panel {
+    @apply bg-card backdrop-blur-xl border border-glass;
+  }
+  
+  .holo-table {
+    @apply bg-gradient-to-br from-gray-800/50 to-transparent border border-blue-500/30 rounded-lg p-3 cursor-pointer transition-all duration-300 hover:border-blue-400 hover:shadow-glow-primary hover:-translate-y-1;
+  }
+  
+  .holo-table.active {
+    @apply border-blue-400 shadow-glow-primary;
+  }
+  
+  .quantum-item {
+    @apply bg-gradient-to-br from-gray-800/50 to-transparent border border-gray-600 rounded-xl p-4 text-center cursor-pointer transition-all duration-300 hover:border-blue-400 hover:shadow-glow-primary hover:-translate-y-1 flex flex-col items-center justify-center gap-2 min-h-[120px];
+  }
+  
+  .neural-btn {
+    @apply w-7 h-7 rounded-lg bg-gray-700/50 hover:bg-blue-500 transition-all duration-200 flex items-center justify-center text-white;
+  }
+  
+  .category-btn {
+    @apply px-3 py-2 rounded-lg border border-gray-600 bg-gray-700/30 text-gray-300 hover:border-blue-400 transition-all duration-200 text-sm font-medium;
+  }
+  
+  .category-btn.active {
+    @apply bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/30;
+  }
+  
+  .stream-item {
+    @apply flex justify-between items-center p-3 bg-gray-700/30 rounded-lg border-l-4 border-blue-400 mb-2 last:mb-0 hover:bg-gray-700/50 transition-all duration-200;
+  }
+  
+  .quantum-pay-btn {
+    @apply bg-gradient-to-br from-gray-800/50 to-transparent border border-gray-600 rounded-xl p-4 text-center cursor-pointer transition-all duration-200 hover:border-blue-400 hover:shadow-glow-primary;
+  }
+  
+  .fab {
+    @apply w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110;
+  }
+
+  /* Compact Menu Styles */
+.compact-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  padding: 2px;
+  align-content: start;
+}
+
+.compact-item {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.compact-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  border-color: var(--primary);
+}
+
+.compact-icon {
+  font-size: 1.4em;
+  margin-bottom: 2px;
+}
+
+.compact-name {
+  font-weight: 600;
+  font-size: 0.8em;
+  line-height: 1.1;
+  color: white;
+}
+
+.compact-price {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 0.85em;
+}
+
+.compact-vat {
+  font-size: 0.7em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Enhanced Categories */
+.enhanced-categories {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.enhanced-category-btn {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--light);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  font-size: 0.8em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.enhanced-category-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+/* Quick Actions Bar */
+.quick-actions-bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+  flex-shrink: 0;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+}
+
+.quick-action-btn {
+  padding: 6px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--light);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.75em;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: auto;
+}
+
+.quick-action-btn:hover:not(:disabled) {
+  background: var(--primary);
+  transform: scale(1.02);
+}
+
+.quick-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quick-action-icon {
+  font-size: 1.1em;
+}
+
+.quick-action-label {
+  font-size: 0.7em;
+  line-height: 1;
+}
+
+/* Search Bar */
+.search-bar {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: white;
+  font-size: 0.85em;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.search-bar::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.search-bar:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+}
