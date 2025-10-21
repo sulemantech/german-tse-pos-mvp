@@ -1,7 +1,4 @@
-import type { Table, MenuItem, Order } from '../types';
-
-// Helper to generate order IDs
-const generateOrderId = () => `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+import type { Table, MenuItem } from '../types';
 
 // Current time for realistic timestamps
 const now = new Date();
