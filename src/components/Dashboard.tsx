@@ -5,6 +5,13 @@ interface DashboardProps {
   tables: Table[];
   menuItems: MenuItem[];
   orders: Order[];
+  tableStats: {
+    totalTables: number;
+    occupiedTables: number;
+    freeTables: number;
+    averageOrderTime: number;
+    revenueToday: number;
+  };
 }
 
 interface EditModalData {
@@ -13,11 +20,35 @@ interface EditModalData {
   isEditing: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
+// Extended types for dashboard-specific data
+interface ExtendedMenuItem extends MenuItem {
+  tags?: string[];
+}
+
+interface ExtendedTable extends Table {
+  capacity?: number;
+}
+
+interface StaffMember {
+  id: number;
+  name: string;
+  role: string;
+  tables: number;
+  revenue: number;
+  rating: number;
+  status: 'active' | 'break' | 'off';
+  avatar: string;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders, tableStats }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'menu' | 'tables' | 'staff' | 'settings'>('overview');
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('today');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [editModal, setEditModal] = useState<EditModalData | null>(null);
+
+  // Cast menuItems to extended type
+  const extendedMenuItems = menuItems as ExtendedMenuItem[];
+  const extendedTables = tables as ExtendedTable[];
 
   // Enhanced Analytics Data
   const analyticsData = useMemo(() => {
@@ -45,7 +76,7 @@ const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
   }, []);
 
   // Enhanced Staff Data
-  const staffData = useMemo(() => {
+  const staffData = useMemo((): StaffMember[] => {
     return [
       {
         id: 1,
@@ -106,9 +137,11 @@ const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
           <div className="text-green-400 text-xs mt-1">↑ 8 orders from last hour</div>
         </div>
         <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 rounded-xl p-4">
-          <div className="text-2xl font-bold text-white">18/25</div>
+          <div className="text-2xl font-bold text-white">{tableStats.occupiedTables}/{tableStats.totalTables}</div>
           <div className="text-purple-400 text-sm">Tables Occupied</div>
-          <div className="text-green-400 text-xs mt-1">72% utilization rate</div>
+          <div className="text-green-400 text-xs mt-1">
+            {Math.round((tableStats.occupiedTables / tableStats.totalTables) * 100)}% utilization rate
+          </div>
         </div>
         <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 border border-orange-500/30 rounded-xl p-4">
           <div className="text-2xl font-bold text-white">156</div>
@@ -398,7 +431,7 @@ const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
 
     // Filter menu items
     const filteredItems = useMemo(() => {
-      let filtered = menuItems;
+      let filtered = extendedMenuItems;
       
       if (selectedCategory !== 'all') {
         filtered = filtered.filter(item => item.category === selectedCategory);
@@ -411,7 +444,7 @@ const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
       }
       
       return filtered;
-    }, [menuItems, selectedCategory, searchTerm]);
+    }, [extendedMenuItems, selectedCategory, searchTerm]);
 
     return (
       <div className="space-y-6">
@@ -457,19 +490,19 @@ const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
         {/* Menu Statistics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-blue-500/20 border border-blue-500/30 rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-blue-400">{menuItems.filter(m => m.category === 'Drinks').length}</div>
+            <div className="text-2xl font-bold text-blue-400">{extendedMenuItems.filter(m => m.category === 'Drinks').length}</div>
             <div className="text-blue-400 text-sm">Drinks</div>
           </div>
           <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-green-400">{menuItems.filter(m => m.category === 'Appetizers').length}</div>
+            <div className="text-2xl font-bold text-green-400">{extendedMenuItems.filter(m => m.category === 'Appetizers').length}</div>
             <div className="text-green-400 text-sm">Appetizers</div>
           </div>
           <div className="bg-orange-500/20 border border-orange-500/30 rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-orange-400">{menuItems.filter(m => m.category === 'Main Courses').length}</div>
+            <div className="text-2xl font-bold text-orange-400">{extendedMenuItems.filter(m => m.category === 'Main Courses').length}</div>
             <div className="text-orange-400 text-sm">Main Courses</div>
           </div>
           <div className="bg-purple-500/20 border border-purple-500/30 rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-purple-400">{menuItems.filter(m => m.category === 'Desserts').length}</div>
+            <div className="text-2xl font-bold text-purple-400">{extendedMenuItems.filter(m => m.category === 'Desserts').length}</div>
             <div className="text-purple-400 text-sm">Desserts</div>
           </div>
         </div>
@@ -494,14 +527,14 @@ const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
               <div className="flex justify-between items-center text-sm mb-3">
                 <div className="text-gray-400">VAT {item.vat}%</div>
                 <div className="flex gap-1 flex-wrap justify-end">
-                  {item.tags.slice(0, 2).map(tag => (
+                  {(item.tags || []).slice(0, 2).map(tag => (
                     <span key={tag} className="bg-primary/20 text-primary px-2 py-1 rounded text-xs">
                       {tag}
                     </span>
                   ))}
-                  {item.tags.length > 2 && (
+                  {(item.tags || []).length > 2 && (
                     <span className="bg-gray-600 text-gray-300 px-2 py-1 rounded text-xs">
-                      +{item.tags.length - 2}
+                      +{(item.tags || []).length - 2}
                     </span>
                   )}
                 </div>
@@ -593,26 +626,26 @@ const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
       {/* Table Status Overview */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-green-400">8</div>
+          <div className="text-2xl font-bold text-green-400">{tableStats.occupiedTables}</div>
           <div className="text-green-400 text-sm">Occupied</div>
         </div>
         <div className="bg-blue-500/20 border border-blue-500/30 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-blue-400">12</div>
+          <div className="text-2xl font-bold text-blue-400">{tableStats.freeTables}</div>
           <div className="text-blue-400 text-sm">Available</div>
         </div>
         <div className="bg-amber-500/20 border border-amber-500/30 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-amber-400">2</div>
+          <div className="text-2xl font-bold text-amber-400">{tables.filter(t => t.status === 'cleaning').length}</div>
           <div className="text-amber-400 text-sm">Cleaning</div>
         </div>
         <div className="bg-purple-500/20 border border-purple-500/30 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-purple-400">3</div>
+          <div className="text-2xl font-bold text-purple-400">{tables.filter(t => t.status === 'reserved').length}</div>
           <div className="text-purple-400 text-sm">Reserved</div>
         </div>
       </div>
 
       {/* Tables Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {tables.map((table) => (
+        {extendedTables.map((table) => (
           <div key={table.id} className={`border-2 rounded-xl p-4 transition-all duration-200 hover:scale-105 cursor-pointer ${
             table.status === 'occupied' ? 'border-green-500 bg-green-500/10' :
             table.status === 'free' ? 'border-blue-500 bg-blue-500/10' :
@@ -635,7 +668,7 @@ const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">Capacity:</span>
-                <span className="text-white">4 seats</span>
+                <span className="text-white">{table.capacity || 4} seats</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Current:</span>
@@ -705,19 +738,23 @@ const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
       {/* Staff Performance Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-white">8</div>
+          <div className="text-2xl font-bold text-white">{staffData.length}</div>
           <div className="text-gray-400 text-sm">Total Staff</div>
         </div>
         <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-green-400">6</div>
+          <div className="text-2xl font-bold text-green-400">{staffData.filter(s => s.status === 'active').length}</div>
           <div className="text-green-400 text-sm">Active Now</div>
         </div>
         <div className="bg-blue-500/20 border border-blue-500/30 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-blue-400">4.6</div>
+          <div className="text-2xl font-bold text-blue-400">
+            {(staffData.reduce((sum, staff) => sum + staff.rating, 0) / staffData.length).toFixed(1)}
+          </div>
           <div className="text-blue-400 text-sm">Avg Rating</div>
         </div>
         <div className="bg-purple-500/20 border border-purple-500/30 rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-purple-400">€9,850</div>
+          <div className="text-2xl font-bold text-purple-400">
+            €{staffData.reduce((sum, staff) => sum + staff.revenue, 0).toLocaleString()}
+          </div>
           <div className="text-purple-400 text-sm">Total Revenue</div>
         </div>
       </div>
@@ -735,7 +772,9 @@ const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders }) => {
                 </div>
               </div>
               <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                staff.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
+                staff.status === 'active' ? 'bg-green-500/20 text-green-400' : 
+                staff.status === 'break' ? 'bg-amber-500/20 text-amber-400' :
+                'bg-gray-500/20 text-gray-400'
               }`}>
                 {staff.status.toUpperCase()}
               </div>

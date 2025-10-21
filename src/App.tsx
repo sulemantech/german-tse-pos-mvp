@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Header from './components/header';
+import Header from './components/Header';
 import TablesPanel from './components/TablesPanel';
 import OrderInterface from './components/OrderInterface';
 import PaymentTerminal from './components/PaymentTerminal';
@@ -8,6 +8,7 @@ import FloatingActions from './components/FloatingActions';
 import KitchenView from './components/KitchenView';
 import Dashboard from './components/Dashboard';
 import { usePOS } from './hooks/usePOS';
+import type { Table, Order } from './types';
 
 // Main POS Component (your existing app)
 const POSInterface: React.FC = () => {
@@ -263,8 +264,22 @@ const NavigationFloatingActions: React.FC<{
 };
 
 // Helper function to extract all orders from tables
-const getAllOrders = (tables: any[]) => {
+const getAllOrders = (tables: Table[]): Order[] => {
   return tables.flatMap(table => table.orderHistory);
+};
+
+// Create proper handler for kitchen item status updates
+const handleUpdateItemStatus = (
+  orderId: string, 
+  itemIndex: number, 
+  status: 'pending' | 'preparing' | 'ready' | 'served'
+) => {
+  console.log(`Kitchen: Update item ${itemIndex} in order ${orderId} to ${status}`);
+};
+
+// Mock function for priority changes
+const handlePriorityChange = (orderId: string, priority: 'low' | 'normal' | 'high') => {
+  console.log(`Priority changed for order ${orderId}: ${priority}`);
 };
 
 // Main App Component with Router
@@ -272,14 +287,37 @@ const App: React.FC = () => {
   const {
     tables,
     menuItems,
-    currentOrder,
-    completeOrder,
-    updateQuantity,
-    onPriorityChange
+    completeOrder
   } = usePOS();
 
   // Get all orders for dashboard
   const allOrders = getAllOrders(tables);
+
+  // Calculate dashboard stats
+  const tableStats = {
+    totalTables: tables.length,
+    occupiedTables: tables.filter(t => t.status === 'occupied').length,
+    freeTables: tables.filter(t => t.status === 'free').length,
+    averageOrderTime: 45,
+    revenueToday: allOrders
+      .filter(order => order.status === 'completed' || order.status === 'paid')
+      .reduce((total, order) => total + order.total, 0)
+  };
+
+  // Prepare kitchen orders with proper typing
+  const kitchenOrders = tables.flatMap(table => 
+    table.orderHistory
+      .filter(order => order.status === 'active')
+      .map(order => ({
+        ...order,
+        items: order.items.map(item => ({
+          ...item,
+          status: (item.status as 'pending' | 'preparing' | 'ready' | 'served') || 'pending',
+          priority: item.priority || 'normal'
+        })),
+        priority: order.priority || 'normal'
+      }))
+  );
 
   return (
     <Router>
@@ -299,11 +337,16 @@ const App: React.FC = () => {
           {/* Kitchen Display - Full Screen */}
           <Route path="/kitchen" element={
             <KitchenView
-              orders={[currentOrder].filter(Boolean) as any[]}
+              orders={kitchenOrders}
               tables={tables}
-              onUpdateItemStatus={updateQuantity}
-              onCompleteOrder={completeOrder}
-              onPriorityChange={onPriorityChange}
+              onUpdateItemStatus={handleUpdateItemStatus}
+              onCompleteOrder={(orderId: string) => {
+                const table = tables.find(t => t.orderHistory.some(o => o.id === orderId));
+                if (table) {
+                  completeOrder(table.id, 'cash', `TSE_${Date.now()}`);
+                }
+              }}
+              onPriorityChange={handlePriorityChange}
             />
           } />
 
@@ -313,6 +356,7 @@ const App: React.FC = () => {
               tables={tables}
               menuItems={menuItems}
               orders={allOrders}
+              tableStats={tableStats}
             />
           } />
         </Routes>

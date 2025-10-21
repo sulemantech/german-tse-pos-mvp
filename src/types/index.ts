@@ -5,6 +5,7 @@ export interface MenuItem {
   price: number;
   vat: number;
   icon: string;
+  tags?: string[]; // Add optional tags
 }
 
 export interface OrderItem {
@@ -16,6 +17,8 @@ export interface OrderItem {
   notes?: string;
   icon?: string;
   category?: string;
+  status?: 'pending' | 'preparing' | 'ready' | 'served'; // Add for kitchen
+  priority?: 'low' | 'normal' | 'high'; // Add for kitchen
 }
 
 export type OrderStatus = 'active' | 'completed' | 'cancelled' | 'paid';
@@ -31,6 +34,7 @@ export interface Order {
   waiter?: string;
   paymentMethod?: string;
   tseSignature?: string;
+  priority?: 'low' | 'normal' | 'high'; // Add for kitchen
 }
 
 export interface Table {
@@ -57,4 +61,10 @@ export interface TableStats {
   freeTables: number;
   averageOrderTime: number;
   revenueToday: number;
+}
+
+export interface KitchenOrder {
+  order: Order;
+  table: Table;
+  items: OrderItem[];
 }

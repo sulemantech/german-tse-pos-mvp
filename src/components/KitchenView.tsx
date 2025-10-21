@@ -4,7 +4,7 @@ import type { Order, OrderItem, Table } from '../types';
 interface KitchenViewProps {
   orders: Order[];
   tables: Table[];
-  onUpdateItemStatus: (orderId: string, itemIndex: number, status: OrderItem['status']) => void;
+  onUpdateItemStatus: (orderId: string, itemIndex: number, status: NonNullable<OrderItem['status']>) => void;
   onCompleteOrder: (orderId: string) => void;
   onPriorityChange: (orderId: string, priority: 'low' | 'normal' | 'high' | 'urgent') => void;
 }
@@ -25,7 +25,6 @@ const KitchenView: React.FC<KitchenViewProps> = ({
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'preparing' | 'ready' | 'served'>('all');
   const [filterPriority, setFilterPriority] = useState<'all' | 'low' | 'normal' | 'high' | 'urgent'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedOrder, setSelectedOrder] = useState<KitchenOrder | null>(null);
 
   // Combine orders with table data and filter items
@@ -40,7 +39,7 @@ const KitchenView: React.FC<KitchenViewProps> = ({
         
         return {
           order,
-          table,
+          table: table!, // Use non-null assertion since we filter below
           items: pendingItems
         };
       })
@@ -90,7 +89,7 @@ const KitchenView: React.FC<KitchenViewProps> = ({
     };
   }, [kitchenOrders]);
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string = 'normal') => {
     switch (priority) {
       case 'urgent': return 'bg-red-500 border-red-500 text-white';
       case 'high': return 'bg-orange-500 border-orange-500 text-white';
@@ -100,7 +99,7 @@ const KitchenView: React.FC<KitchenViewProps> = ({
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string = 'pending') => {
     switch (status) {
       case 'pending': return 'bg-amber-500/20 border-amber-500 text-amber-400';
       case 'preparing': return 'bg-blue-500/20 border-blue-500 text-blue-400';
@@ -131,7 +130,7 @@ const KitchenView: React.FC<KitchenViewProps> = ({
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">
             <div className={`px-2 py-1 rounded-full text-xs font-bold ${getPriorityColor(kitchenOrder.order.priority)}`}>
-              {kitchenOrder.order.priority.toUpperCase()}
+              {(kitchenOrder.order.priority || 'normal').toUpperCase()}
             </div>
             <div className="text-white font-bold text-sm">{kitchenOrder.table.name}</div>
           </div>
@@ -158,10 +157,10 @@ const KitchenView: React.FC<KitchenViewProps> = ({
               
               <div className="flex items-center gap-2 flex-shrink-0">
                 <div className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(item.status)}`}>
-                  {item.status.toUpperCase()}
+                  {(item.status || 'pending').toUpperCase()}
                 </div>
                 <div className="flex flex-col gap-1">
-                  {item.status === 'pending' && (
+                  {(!item.status || item.status === 'pending') && (
                     <button
                       onClick={() => onUpdateItemStatus(kitchenOrder.order.id, index, 'preparing')}
                       className="w-6 h-6 bg-blue-600 hover:bg-blue-700 rounded text-white text-xs flex items-center justify-center"
@@ -206,7 +205,7 @@ const KitchenView: React.FC<KitchenViewProps> = ({
           ) : (
             <div className="flex gap-1 flex-1">
               <select
-                value={kitchenOrder.order.priority}
+                value={kitchenOrder.order.priority || 'normal'}
                 onChange={(e) => onPriorityChange(kitchenOrder.order.id, e.target.value as any)}
                 className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-primary"
               >
@@ -257,7 +256,7 @@ const KitchenView: React.FC<KitchenViewProps> = ({
               <div className="bg-gray-700/50 rounded-lg p-3">
                 <div className="text-gray-400">Priority</div>
                 <div className={`font-semibold ${getPriorityColor(kitchenOrder.order.priority).replace('bg-', 'text-')}`}>
-                  {kitchenOrder.order.priority.toUpperCase()}
+                  {(kitchenOrder.order.priority || 'normal').toUpperCase()}
                 </div>
               </div>
               <div className="bg-gray-700/50 rounded-lg p-3">
@@ -287,7 +286,7 @@ const KitchenView: React.FC<KitchenViewProps> = ({
                       </div>
                     </div>
                     <div className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(item.status)}`}>
-                      {item.status.toUpperCase()}
+                      {(item.status || 'pending').toUpperCase()}
                     </div>
                   </div>
                 ))}
@@ -299,7 +298,7 @@ const KitchenView: React.FC<KitchenViewProps> = ({
               <button
                 onClick={() => {
                   kitchenOrder.items.forEach((item, index) => {
-                    if (item.status === 'pending') {
+                    if (!item.status || item.status === 'pending') {
                       onUpdateItemStatus(kitchenOrder.order.id, index, 'preparing');
                     }
                   });
