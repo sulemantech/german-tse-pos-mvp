@@ -37,7 +37,7 @@ const PaymentTerminal: React.FC<PaymentTerminalProps> = ({
 
   const handleStartNewOrder = () => {
     if (!currentTable) return;
-    onStartNewOrder(currentTable.id, newOrderGuests);
+    onStartNewOrder?.(currentTable.id, newOrderGuests);
     setNewOrderGuests(1);
   };
 
