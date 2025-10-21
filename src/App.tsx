@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Header from './components/Header';
+import Header from './components/header';
 import TablesPanel from './components/TablesPanel';
 import OrderInterface from './components/OrderInterface';
 import PaymentTerminal from './components/PaymentTerminal';
@@ -278,7 +278,8 @@ const handleUpdateItemStatus = (
 };
 
 // Mock function for priority changes
-const handlePriorityChange = (orderId: string, priority: 'low' | 'normal' | 'high') => {
+// In your App.tsx, update the handlePriorityChange function:
+const handlePriorityChange = (orderId: string, priority: 'low' | 'normal' | 'high' | 'urgent') => {
   console.log(`Priority changed for order ${orderId}: ${priority}`);
 };
 

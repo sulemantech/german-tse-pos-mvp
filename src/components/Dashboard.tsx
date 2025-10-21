@@ -40,7 +40,7 @@ interface StaffMember {
   avatar: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, orders, tableStats }) => {
+const Dashboard: React.FC<DashboardProps> = ({ tables, menuItems, tableStats }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'menu' | 'tables' | 'staff' | 'settings'>('overview');
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('today');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');

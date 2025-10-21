@@ -18,7 +18,6 @@ const TablesPanel: React.FC<TablesPanelProps> = ({
   getOrderDuration,
   onFreeTable,
   onStartNewOrder,
-  onCreateTable
 }) => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'occupied' | 'free' | 'cleaning'>('all');
   const [searchTerm, setSearchTerm] = useState('');
