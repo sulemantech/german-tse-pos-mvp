@@ -8,6 +8,7 @@ interface TablesPanelProps {
   getOrderDuration: (startTime: string) => string;
   onFreeTable: (tableId: string) => void;
   onStartNewOrder: (tableId: string, guests: number) => void;
+  onCreateTable?: (tableData: Partial<Table>) => void;
 }
 
 const TablesPanel: React.FC<TablesPanelProps> = ({
@@ -16,12 +17,19 @@ const TablesPanel: React.FC<TablesPanelProps> = ({
   onSelectTable,
   getOrderDuration,
   onFreeTable,
-  onStartNewOrder
+  onStartNewOrder,
+  onCreateTable
 }) => {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterStatus, setFilterStatus] = useState<'all' | 'occupied' | 'free' | 'cleaning'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [newOrderGuests, setNewOrderGuests] = useState<{ [key: string]: number }>({});
+  const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  const [showTableModal, setShowTableModal] = useState<Table | null>(null);
+
+  // Get unique locations for filter
+  const locations = useMemo(() => {
+    const uniqueLocations = [...new Set(tables.map(table => table.location))];
+    return ['all', ...uniqueLocations];
+  }, [tables]);
 
   // Filter and search tables
   const filteredTables = useMemo(() => {
@@ -30,6 +38,11 @@ const TablesPanel: React.FC<TablesPanelProps> = ({
     // Filter by status
     if (filterStatus !== 'all') {
       filtered = filtered.filter(table => table.status === filterStatus);
+    }
+
+    // Filter by location
+    if (selectedLocation !== 'all') {
+      filtered = filtered.filter(table => table.location === selectedLocation);
     }
 
     // Filter by search
@@ -42,7 +55,7 @@ const TablesPanel: React.FC<TablesPanelProps> = ({
     }
 
     return filtered;
-  }, [tables, filterStatus, searchTerm]);
+  }, [tables, filterStatus, selectedLocation, searchTerm]);
 
   // Group tables by location
   const tablesByLocation = useMemo(() => {
@@ -55,351 +68,263 @@ const TablesPanel: React.FC<TablesPanelProps> = ({
     }, {} as Record<string, Table[]>);
   }, [filteredTables]);
 
-  // Table statistics
-  const tableStats = useMemo(() => {
-    const total = tables.length;
-    const occupied = tables.filter(t => t.status === 'occupied').length;
-    const free = tables.filter(t => t.status === 'free').length;
-    const cleaning = tables.filter(t => t.status === 'cleaning').length;
-    
-    return { total, occupied, free, cleaning };
-  }, [tables]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'occupied': return 'bg-green-500';
-      case 'free': return 'bg-blue-500';
-      case 'cleaning': return 'bg-amber-500';
-      case 'reserved': return 'bg-purple-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'occupied': return 'OCCUPIED';
-      case 'free': return 'AVAILABLE';
-      case 'cleaning': return 'CLEANING';
-      case 'reserved': return 'RESERVED';
-      default: return status.toUpperCase();
-    }
-  };
-
   const getCurrentOrder = (table: Table) => {
     if (!table.currentOrderId) return null;
     return table.orderHistory.find(order => order.id === table.currentOrderId);
   };
 
-  const handleStartNewOrder = (tableId: string) => {
-    const guests = newOrderGuests[tableId] || 1;
-    onStartNewOrder(tableId, guests);
-    setNewOrderGuests(prev => ({ ...prev, [tableId]: 1 }));
-  };
-
-  const QuickActions = ({ table }: { table: Table }) => {
-    const currentOrder = getCurrentOrder(table);
-
-    if (table.status === 'free') {
-      return (
-        <div className="flex gap-1 mt-1">
-          <select
-            value={newOrderGuests[table.id] || 1}
-            onChange={(e) => setNewOrderGuests(prev => ({
-              ...prev,
-              [table.id]: Number(e.target.value)
-            }))}
-            className="text-xs bg-gray-700 border border-gray-600 rounded px-1 text-white w-12"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {[1,2,3,4,5,6,7,8].map(num => (
-              <option key={num} value={num}>{num}</option>
-            ))}
-          </select>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleStartNewOrder(table.id);
-            }}
-            className="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition-colors flex-1"
-          >
-            Start
-          </button>
-        </div>
-      );
-    }
-
-    if (table.status === 'cleaning') {
-      return (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onFreeTable(table.id);
-          }}
-          className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded transition-colors w-full mt-1"
-        >
-          Mark Ready
-        </button>
-      );
-    }
-
-    if (table.status === 'occupied' && currentOrder) {
-      return (
-        <div className="text-xs text-green-400 font-medium mt-1">
-          {getOrderDuration(currentOrder.startTime)} • €{currentOrder.total.toFixed(2)}
-        </div>
-      );
-    }
-
-    return null;
-  };
-
-  const TableCard = ({ table }: { table: Table }) => {
+  const CompactTableCard = ({ table }: { table: Table }) => {
     const currentOrder = getCurrentOrder(table);
     
     return (
       <div
-        className={`relative bg-gradient-to-br from-gray-800/50 to-transparent border rounded-lg p-2 cursor-pointer transition-all duration-200 group ${
+        className={`p-2 border rounded-lg cursor-pointer transition-all duration-150 group ${
           currentTable?.id === table.id
-            ? 'border-primary shadow-glow-primary scale-[1.02]'
-            : 'border-gray-600 hover:border-primary hover:shadow-glow'
+            ? 'border-primary bg-primary/10 shadow-sm'
+            : 'border-gray-600 hover:border-primary hover:bg-gray-700/30'
         }`}
         onClick={() => onSelectTable(table)}
       >
-        {/* Status Indicator */}
-        <div className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${getStatusColor(table.status)}`}></div>
-        
-        {/* Table Info */}
-        <div className="mb-1">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <div className="text-white font-semibold text-sm leading-tight">{table.name}</div>
-              <div className="text-gray-400 text-xs">{table.location}</div>
-            </div>
-            {table.guests > 0 && (
-              <div className="text-accent text-xs font-medium bg-amber-500/20 px-1.5 py-0.5 rounded">
-                👥{table.guests}
-              </div>
-            )}
+        {/* Header - Table Number & Status */}
+        <div className="flex justify-between items-start mb-1">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${
+              table.status === 'occupied' ? 'bg-green-500' :
+              table.status === 'free' ? 'bg-blue-500' :
+              'bg-amber-500'
+            }`} />
+            <span className="text-white font-semibold text-sm">{table.name}</span>
           </div>
-          
-          {/* Status & Waiter */}
-          <div className="flex justify-between items-center mt-1">
-            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-              table.status === 'occupied' ? 'bg-green-500/20 text-green-400' :
-              table.status === 'free' ? 'bg-blue-500/20 text-blue-400' :
-              table.status === 'cleaning' ? 'bg-amber-500/20 text-amber-400' :
-              'bg-gray-500/20 text-gray-400'
-            }`}>
-              {getStatusText(table.status)}
+          {table.guests > 0 && (
+            <span className="text-amber-400 text-xs bg-amber-500/20 px-1.5 py-0.5 rounded">
+              {table.guests}
             </span>
+          )}
+        </div>
+
+        {/* Details */}
+        <div className="space-y-1 text-xs">
+          <div className="text-gray-400 flex justify-between">
+            <span>{table.location}</span>
             {table.waiter && (
-              <span className="text-blue-400 text-xs truncate max-w-[60px]" title={table.waiter}>
-                👤 {table.waiter.split(' ')[0]}
+              <span className="text-blue-400 truncate max-w-[80px]" title={table.waiter}>
+                {table.waiter.split(' ')[0]}
               </span>
             )}
           </div>
-        </div>
 
-        {/* Quick Actions */}
-        <QuickActions table={table} />
+          {currentOrder && (
+            <div className="flex justify-between text-green-400">
+              <span>{getOrderDuration(currentOrder.startTime)}</span>
+              <span>€{currentOrder.total.toFixed(2)}</span>
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          <div className="flex gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
+            {table.status === 'free' && (
+              <button
+                onClick={() => onStartNewOrder(table.id, 1)}
+                className="flex-1 text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition-colors"
+              >
+                Start
+              </button>
+            )}
+            {table.status === 'cleaning' && (
+              <button
+                onClick={() => onFreeTable(table.id)}
+                className="flex-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded transition-colors"
+              >
+                Ready
+              </button>
+            )}
+            {table.status === 'occupied' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTableModal(table);
+                }}
+                className="flex-1 text-xs bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded transition-colors"
+              >
+                Details
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
 
-  const TableListItem = ({ table }: { table: Table }) => {
+  const TableModal = ({ table }: { table: Table }) => {
     const currentOrder = getCurrentOrder(table);
     
     return (
-      <div
-        className={`flex items-center gap-3 p-2 border-b border-gray-700/50 cursor-pointer transition-all duration-150 group ${
-          currentTable?.id === table.id ? 'bg-primary/10 border-primary' : 'hover:bg-gray-700/30'
-        }`}
-        onClick={() => onSelectTable(table)}
-      >
-        {/* Status Dot */}
-        <div className={`w-2 h-2 rounded-full ${getStatusColor(table.status)}`}></div>
-        
-        {/* Table Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="text-white font-semibold text-sm">{table.name}</div>
-            <div className="text-gray-400 text-xs">{table.location}</div>
-            {table.guests > 0 && (
-              <div className="text-accent text-xs">👥{table.guests}</div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className={`text-xs px-1.5 py-0.5 rounded ${
-              table.status === 'occupied' ? 'bg-green-500/20 text-green-400' :
-              table.status === 'free' ? 'bg-blue-500/20 text-blue-400' :
-              'bg-amber-500/20 text-amber-400'
-            }`}>
-              {getStatusText(table.status)}
-            </span>
-            {table.waiter && (
-              <span className="text-blue-400 text-xs">👤 {table.waiter}</span>
-            )}
-            {currentOrder && (
-              <span className="text-green-400 text-xs">
-                {getOrderDuration(currentOrder.startTime)} • €{currentOrder.total.toFixed(2)}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-          {table.status === 'free' && (
-            <>
-              <select
-                value={newOrderGuests[table.id] || 1}
-                onChange={(e) => setNewOrderGuests(prev => ({
-                  ...prev,
-                  [table.id]: Number(e.target.value)
-                }))}
-                className="text-xs bg-gray-700 border border-gray-600 rounded px-1 text-white w-12"
-              >
-                {[1,2,3,4,5,6].map(num => (
-                  <option key={num} value={num}>{num}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => handleStartNewOrder(table.id)}
-                className="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition-colors"
-              >
-                Start
-              </button>
-            </>
-          )}
-          {table.status === 'cleaning' && (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-800 rounded-xl p-4 max-w-sm w-full border border-gray-600">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h2 className="text-lg font-bold text-white">{table.name}</h2>
+              <p className="text-gray-400 text-sm">{table.location}</p>
+            </div>
             <button
-              onClick={() => onFreeTable(table.id)}
-              className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded transition-colors"
+              onClick={() => setShowTableModal(null)}
+              className="text-gray-400 hover:text-white"
             >
-              Ready
+              ✕
             </button>
-          )}
+          </div>
+
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Status</span>
+              <span className={`
+                ${table.status === 'occupied' ? 'text-green-400' :
+                  table.status === 'free' ? 'text-blue-400' :
+                  'text-amber-400'} font-semibold`
+              }>
+                {table.status.charAt(0).toUpperCase() + table.status.slice(1)}
+              </span>
+            </div>
+
+            {table.guests > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Guests</span>
+                <span className="text-white">{table.guests}</span>
+              </div>
+            )}
+
+            {table.waiter && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Waiter</span>
+                <span className="text-blue-400">{table.waiter}</span>
+              </div>
+            )}
+
+            {currentOrder && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Duration</span>
+                  <span className="text-green-400">{getOrderDuration(currentOrder.startTime)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Total</span>
+                  <span className="text-accent font-semibold">€{currentOrder.total.toFixed(2)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-3 mt-3 border-t border-gray-700">
+            <button
+              onClick={() => {
+                onSelectTable(table);
+                setShowTableModal(null);
+              }}
+              className="flex-1 px-3 py-2 bg-primary hover:bg-primary/80 text-white rounded-lg text-sm transition-colors"
+            >
+              Open Order
+            </button>
+            {table.status === 'occupied' && (
+              <button
+                onClick={() => {
+                  onFreeTable(table.id);
+                  setShowTableModal(null);
+                }}
+                className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors"
+              >
+                Free Table
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
   };
 
   return (
-    <aside className="bg-card backdrop-blur-xl border-r border-glass p-3 flex flex-col gap-3 h-[calc(100vh-70px)] overflow-hidden">
-      {/* Header with Controls */}
-      <div className="flex flex-col gap-2">
-        {/* Search Bar */}
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="🔍 Search tables..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-900/30 border border-glass rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:border-primary focus:shadow-glow"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-            >
-              ✕
-            </button>
-          )}
+    <aside className="bg-gray-900/80 backdrop-blur-xl border-r border-gray-700 p-3 flex flex-col gap-3 h-[calc(100vh-70px)] overflow-hidden w-64">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-white font-bold text-sm">Tables</h2>
+        <div className="text-gray-400 text-xs">
+          {filteredTables.length}/{tables.length}
         </div>
+      </div>
 
-        {/* Controls Row */}
+      {/* Search & Filters */}
+      <div className="space-y-2">
+        <input
+          type="text"
+          placeholder="🔍 Search tables..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:border-primary"
+        />
+        
         <div className="flex gap-2">
-          {/* View Toggle */}
-          <div className="flex bg-gray-800/50 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                viewMode === 'grid' 
-                  ? 'bg-primary text-white shadow-glow-primary' 
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Grid
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                viewMode === 'list' 
-                  ? 'bg-primary text-white shadow-glow-primary' 
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              List
-            </button>
-          </div>
+          <select
+            value={selectedLocation}
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            className="flex-1 bg-gray-800/50 border border-gray-600 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-primary"
+          >
+            {locations.map(location => (
+              <option key={location} value={location}>
+                {location === 'all' ? 'All Areas' : location}
+              </option>
+            ))}
+          </select>
 
-          {/* Status Filter */}
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="flex-1 bg-gray-800/50 border border-glass rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-primary"
+            className="flex-1 bg-gray-800/50 border border-gray-600 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-primary"
           >
-            <option value="all">All Tables</option>
+            <option value="all">All</option>
             <option value="occupied">Occupied</option>
-            <option value="free">Available</option>
+            <option value="free">Free</option>
             <option value="cleaning">Cleaning</option>
           </select>
         </div>
       </div>
 
-      {/* Statistics Bar */}
+      {/* Statistics */}
       <div className="grid grid-cols-4 gap-1 text-xs">
         <div className="bg-gray-800/50 rounded p-1 text-center">
-          <div className="text-white font-semibold">{tableStats.total}</div>
+          <div className="text-white font-semibold">{tables.length}</div>
           <div className="text-gray-400">Total</div>
         </div>
         <div className="bg-green-500/20 rounded p-1 text-center border border-green-500/30">
-          <div className="text-green-400 font-semibold">{tableStats.occupied}</div>
-          <div className="text-green-400">Occupied</div>
+          <div className="text-green-400 font-semibold">{tables.filter(t => t.status === 'occupied').length}</div>
+          <div className="text-green-400">Occ</div>
         </div>
         <div className="bg-blue-500/20 rounded p-1 text-center border border-blue-500/30">
-          <div className="text-blue-400 font-semibold">{tableStats.free}</div>
-          <div className="text-blue-400">Available</div>
+          <div className="text-blue-400 font-semibold">{tables.filter(t => t.status === 'free').length}</div>
+          <div className="text-blue-400">Free</div>
         </div>
         <div className="bg-amber-500/20 rounded p-1 text-center border border-amber-500/30">
-          <div className="text-amber-400 font-semibold">{tableStats.cleaning}</div>
-          <div className="text-amber-400">Cleaning</div>
+          <div className="text-amber-400 font-semibold">{tables.filter(t => t.status === 'cleaning').length}</div>
+          <div className="text-amber-400">Clean</div>
         </div>
       </div>
 
-      {/* Tables Container */}
+      {/* Tables List */}
       <div className="flex-1 overflow-y-auto">
         {Object.keys(tablesByLocation).length === 0 ? (
-          <div className="text-center text-gray-400 py-8 text-sm">
-            No tables found{searchTerm ? ` for "${searchTerm}"` : ''}
-          </div>
-        ) : viewMode === 'grid' ? (
-          // Grid View
-          <div className="space-y-4">
-            {Object.entries(tablesByLocation).map(([location, locationTables]) => (
-              <div key={location}>
-                <h3 className="text-white font-semibold text-sm mb-2 px-1 sticky top-0 bg-dark/80 backdrop-blur-sm py-1">
-                  {location.toUpperCase()} ({locationTables.length})
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {locationTables.map((table) => (
-                    <TableCard key={table.id} table={table} />
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="text-center text-gray-400 py-4 text-sm">
+            No tables found
           </div>
         ) : (
-          // List View
-          <div className="space-y-2">
+          <div className="space-y-3">
             {Object.entries(tablesByLocation).map(([location, locationTables]) => (
               <div key={location}>
-                <h3 className="text-white font-semibold text-sm mb-2 px-1 sticky top-0 bg-dark/80 backdrop-blur-sm py-1">
-                  {location.toUpperCase()} ({locationTables.length})
-                </h3>
-                <div className="space-y-1">
+                <div className="flex items-center gap-2 mb-2 sticky top-0 bg-gray-900/80 backdrop-blur-sm py-1">
+                  <h3 className="text-white font-semibold text-xs">
+                    {location} • {locationTables.length}
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
                   {locationTables.map((table) => (
-                    <TableListItem key={table.id} table={table} />
+                    <CompactTableCard key={table.id} table={table} />
                   ))}
                 </div>
               </div>
@@ -408,12 +333,8 @@ const TablesPanel: React.FC<TablesPanelProps> = ({
         )}
       </div>
 
-      {/* Quick Actions Footer */}
-      <div className="border-t border-glass pt-2">
-        <div className="text-xs text-gray-400 text-center">
-          {filteredTables.length} of {tables.length} tables
-        </div>
-      </div>
+      {/* Table Detail Modal */}
+      {showTableModal && <TableModal table={showTableModal} />}
     </aside>
   );
 };
